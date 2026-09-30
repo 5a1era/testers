@@ -1,0 +1,97 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Elros\Testing\Attempt;
+
+use Elros\Testing\Test\Test;
+use DateTimeImmutable;
+use LogicException;
+
+final class Attempt
+{
+
+    /**
+     * @var UserAnswer[]
+     */
+    private array $answers = [];
+
+    public function __construct(
+        private readonly int $id,
+        private readonly Test $test,
+        private readonly int $userId,
+        private readonly DateTimeImmutable $startedAt,
+        private ?DateTimeImmutable $finishedAt = null,
+    ) {}
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getTest(): Test
+    {
+        return $this->test;
+    }
+
+    public function getUserId(): int
+    {
+        return $this->userId;
+    }
+
+    public function getStartedAt(): DateTimeImmutable
+    {
+        return $this->startedAt;
+    }
+
+    public function getFinishedAt(): ?DateTimeImmutable
+    {
+        return $this->finishedAt;
+    }
+
+    public function isFinished(): bool
+    {
+        return $this->finishedAt !== null;
+    }
+
+    public function finish(DateTimeImmutable $finishedAt): void
+    {
+        if ($this->isFinished()) {
+            throw new LogicException(
+                'Attempt is already finished.'
+            );
+        }
+
+        $this->finishedAt = $finishedAt;
+    }
+
+    public function answerQuestion(UserAnswer $userAnswer): void
+    {
+        if ($this->isFinished()) {
+            throw new LogicException(
+                'Cannot answer a finished attempt.'
+            );
+        }
+
+        foreach ($this->answers as $index => $answer) {
+            if (
+                $answer->getQuestion()->getId()
+                === $userAnswer->getQuestion()->getId()
+            ) {
+                $this->answers[$index] = $userAnswer;
+
+                return;
+            }
+        }
+
+        $this->answers[] = $userAnswer;
+    }
+
+    /**
+     * @return UserAnswer[]
+     */
+    public function getAnswers(): array
+    {
+        return $this->answers;
+    }
+}
