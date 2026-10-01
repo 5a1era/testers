@@ -82,7 +82,7 @@ final class AttemptTest extends TestCase
 
         $attempt = new Attempt(1, $test, 100, new DateTimeImmutable('2026-09-30 16:00:00'));
 
-        $userAnswer = new UserAnswer($question, $answer2);
+        $userAnswer = new UserAnswer($question, [$answer2]);
 
         $attempt->answerQuestion($userAnswer);
 
@@ -111,7 +111,7 @@ final class AttemptTest extends TestCase
 
         $attempt = new Attempt(1, $test, 100, new DateTimeImmutable());
 
-        $userAnswer = new UserAnswer($question, $question->getAnswers()[1]);
+        $userAnswer = new UserAnswer($question, [$question->getAnswers()[1]]);
 
         $attempt->answerQuestion($userAnswer);
 
@@ -154,7 +154,7 @@ final class AttemptTest extends TestCase
         $attempt->answerQuestion(
             new UserAnswer(
                 $question,
-                $answer1,
+                [$answer1],
             )
         );
 
@@ -162,13 +162,13 @@ final class AttemptTest extends TestCase
         $attempt->answerQuestion(
             new UserAnswer(
                 $question,
-                $answer2,
+                [$answer2],
             )
         );
 
         self::assertCount(1, $attempt->getAnswers());
 
-        self::assertSame($answer2, $attempt->getAnswers()[0]->getAnswer());
+        self::assertSame($answer2, $attempt->getAnswers()[0]->getAnswers()[0]);
     }
 
     public function testCannotAnswerFinishedAttempt(): void
@@ -191,7 +191,7 @@ final class AttemptTest extends TestCase
 
         $this->expectException(LogicException::class);
 
-        $attempt->answerQuestion(new UserAnswer($question, $answer));
+        $attempt->answerQuestion(new UserAnswer($question, [$answer]));
     }
 
     public function testCannotAnswerQuestionFromAnotherTest(): void
@@ -240,7 +240,7 @@ final class AttemptTest extends TestCase
         $attempt->answerQuestion(
             new UserAnswer(
                 $questionFromTestB,
-                $questionFromTestB->getAnswers()[0],
+                [$questionFromTestB->getAnswers()[0]],
             )
         );
     }

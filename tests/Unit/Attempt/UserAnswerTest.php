@@ -20,11 +20,11 @@ final class UserAnswerTest extends TestCase
 
         $question = new Question(1, 'Сколько будет 2 + 2?', [$answer1, $answer2]);
 
-        $userAnswer = new UserAnswer($question, $answer2);
+        $userAnswer = new UserAnswer($question, [$answer2]);
 
         self::assertSame($question, $userAnswer->getQuestion());
 
-        self::assertSame($answer2, $userAnswer->getAnswer());
+        self::assertSame([$answer2], $userAnswer->getAnswers());
     }
 
     public function testAnswerMustBelongToQuestion(): void
@@ -37,6 +37,42 @@ final class UserAnswerTest extends TestCase
 
         $this->expectException(LogicException::class);
 
-        new UserAnswer($questionA, $answerFromQuestionB);
+        new UserAnswer($questionA, [$answerFromQuestionB]);
+    }
+
+    public function testCanStoreMultipleSelectedAnswers(): void
+    {
+        $answer1 = new AnswerOption(1, '2', true);
+
+        $answer2 = new AnswerOption(2, '3', false);
+
+        $answer3 = new AnswerOption(3, '4', true);
+
+        $question = new Question(
+            1,
+            'Какие числа являются чётными?',
+            [
+                $answer1,
+                $answer2,
+                $answer3,
+            ],
+        );
+
+        $userAnswer = new UserAnswer($question, [$answer1, $answer3]);
+
+        self::assertSame([$answer1, $answer3], $userAnswer->getAnswers());
+    }
+
+    public function testAllSelectedAnswersMustBelongToQuestion(): void
+    {
+        $questionAnswer = new AnswerOption(1, 'Да', true);
+
+        $foreignAnswer = new AnswerOption(2, 'Нет', false);
+
+        $question = new Question(1, 'Вопрос', [$questionAnswer]);
+
+        $this->expectException(LogicException::class);
+
+        new UserAnswer($question, [$questionAnswer, $foreignAnswer]);
     }
 }

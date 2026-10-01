@@ -10,14 +10,21 @@ use LogicException;
 
 final class UserAnswer
 {
+    /**
+     * @param AnswerOption[] $answers
+     */
     public function __construct(
         private readonly Question $question,
-        private readonly AnswerOption $answer,
+        private readonly array $answers,
     ) {
-        if (!$this->hasAnswerOption($answer)) {
-            throw new LogicException(
-                'Answer does not belong to this question.'
-            );
+
+        foreach ($answers as $answer) {
+
+            if (!$this->hasAnswerOption($answer)) {
+                throw new LogicException(
+                    'Answer does not belong to this question.'
+                );
+            }
         }
     }
 
@@ -25,10 +32,12 @@ final class UserAnswer
     {
         return $this->question;
     }
-
-    public function getAnswer(): AnswerOption
+    /**
+     * @return AnswerOption[]
+     */
+    public function getAnswers(): array
     {
-        return $this->answer;
+        return $this->answers;
     }
 
     private function hasAnswerOption(AnswerOption $answer): bool

@@ -16,7 +16,7 @@ final class AttemptResultCalculator
         $correctAnswers = 0;
 
         foreach ($answers as $userAnswer) {
-            if ($userAnswer->getAnswer()->isCorrect()) {
+            if ($this->isCorrectAnswer($userAnswer)) {
                 $correctAnswers++;
             }
         }
@@ -39,5 +39,27 @@ final class AttemptResultCalculator
             score: $score,
             passed: $passed,
         );
+    }
+
+    private function isCorrectAnswer(UserAnswer $userAnswer): bool
+    {
+        $correctAnswerIds = [];
+
+        foreach ($userAnswer->getQuestion()->getAnswers() as $answer) {
+            if ($answer->isCorrect()) {
+                $correctAnswerIds[] = $answer->getId();
+            }
+        }
+
+        $selectedAnswerIds = [];
+
+        foreach ($userAnswer->getAnswers() as $answer) {
+            $selectedAnswerIds[] = $answer->getId();
+        }
+
+        sort($correctAnswerIds);
+        sort($selectedAnswerIds);
+
+        return $correctAnswerIds === $selectedAnswerIds;
     }
 }
