@@ -7,6 +7,7 @@ namespace Elros\Testing\Tests\Unit\Attempt;
 use Elros\Testing\Attempt\UserAnswer;
 use Elros\Testing\Question\AnswerOption;
 use Elros\Testing\Question\Question;
+use Elros\Testing\Question\QuestionType;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -74,5 +75,75 @@ final class UserAnswerTest extends TestCase
         $this->expectException(LogicException::class);
 
         new UserAnswer($question, [$questionAnswer, $foreignAnswer]);
+    }
+
+    public function testSingleQuestionAcceptsOneAnswer(): void
+    {
+        $answer1 = new AnswerOption(1, 'Да', true);
+        $answer2 = new AnswerOption(2, 'Нет', false);
+
+        $question = new Question(1, 'Вопрос?', [$answer1, $answer2], QuestionType::SINGLE);
+
+        $userAnswer = new UserAnswer($question, [$answer1]);
+
+        self::assertSame([$answer1], $userAnswer->getAnswers());
+    }
+
+    public function testSingleQuestionCannotHaveMultipleSelectedAnswers(): void
+    {
+        $answer1 = new AnswerOption(1, 'Да', true);
+        $answer2 = new AnswerOption(2, 'Нет', false);
+
+        $question = new Question(1, 'Вопрос?', [$answer1, $answer2], QuestionType::SINGLE);
+
+        $this->expectException(LogicException::class);
+
+        new UserAnswer($question, [$answer1, $answer2]);
+    }
+
+    public function testMultipleQuestionAcceptsMultipleAnswers(): void
+    {
+        $answer1 = new AnswerOption(1, '2', true);
+        $answer2 = new AnswerOption(2, '3', false);
+        $answer3 = new AnswerOption(3, '4', true);
+
+        $question = new Question(
+            1,
+            'Какие числа являются чётными?',
+            [$answer1, $answer2, $answer3],
+            QuestionType::MULTIPLE,
+        );
+
+        $userAnswer = new UserAnswer($question, [$answer1, $answer3]);
+
+        self::assertSame([$answer1, $answer3], $userAnswer->getAnswers());
+    }
+
+    public function testMultipleQuestionCanHaveOneSelectedAnswer(): void
+    {
+        $answer1 = new AnswerOption(1, '2', true);
+        $answer2 = new AnswerOption(2, '3', false);
+
+        $question = new Question(
+            1,
+            'Какое число является чётным?',
+            [$answer1, $answer2],
+            QuestionType::MULTIPLE,
+        );
+
+        $userAnswer = new UserAnswer($question, [$answer1]);
+
+        self::assertSame([$answer1], $userAnswer->getAnswers());
+    }
+
+    public function testCannotCreateUserAnswerWithoutSelectedAnswers(): void
+    {
+        $answer = new AnswerOption(1, 'Да', true);
+
+        $question = new Question(1, 'Вопрос?', [$answer], QuestionType::SINGLE);
+
+        $this->expectException(LogicException::class);
+
+        new UserAnswer($question, []);
     }
 }
