@@ -9,6 +9,7 @@ use Elros\Testing\Attempt\AttemptResultCalculator;
 use Elros\Testing\Attempt\UserAnswer;
 use Elros\Testing\Question\AnswerOption;
 use Elros\Testing\Question\Question;
+use Elros\Testing\Question\QuestionType;
 use Elros\Testing\Test\Test;
 use Elros\Testing\Test\TestConfiguration;
 use DateTimeImmutable;
@@ -16,20 +17,16 @@ use PHPUnit\Framework\TestCase;
 
 final class AttemptResultCalculatorTest extends TestCase
 {
-    public function testMultipleCorrectAnswersAreCalculatedCorrectly(): void
+    public function testSingleQuestionWithCorrectAnswerGetsFullScore(): void
     {
-        $answer1 = new AnswerOption(1, '2', true);
-        $answer2 = new AnswerOption(2, '3', false);
-        $answer3 = new AnswerOption(3, '4', true);
+        $correctAnswer = new AnswerOption(1, '4', true);
+        $wrongAnswer = new AnswerOption(2, '5', false);
 
         $question = new Question(
             1,
-            'Какие числа являются чётными?',
-            [
-                $answer1,
-                $answer2,
-                $answer3,
-            ],
+            '2 + 2 = ?',
+            [$correctAnswer, $wrongAnswer],
+            QuestionType::SINGLE,
         );
 
         $test = new Test(
@@ -38,29 +35,24 @@ final class AttemptResultCalculatorTest extends TestCase
             '',
             [$question],
             new TestConfiguration(
-                timeLimit: 30,
-                attemptsLimit: 3,
-                passingScore: 100,
+                timeLimit: 60,
+                attemptsLimit: 1,
+                passingScore: 70,
             ),
         );
 
         $attempt = new Attempt(
-            100,
+            1,
             $test,
-            500,
+            100,
             new DateTimeImmutable(),
         );
 
         $attempt->answerQuestion(
-            new UserAnswer(
-                $question,
-                [$answer1, $answer3],
-            ),
+            new UserAnswer($question, [$correctAnswer])
         );
 
-        $calculator = new AttemptResultCalculator();
-
-        $result = $calculator->calculate($attempt);
+        $result = (new AttemptResultCalculator())->calculate($attempt);
 
         self::assertSame(1, $result->getTotalQuestions());
         self::assertSame(1, $result->getAnsweredQuestions());
@@ -69,7 +61,51 @@ final class AttemptResultCalculatorTest extends TestCase
         self::assertTrue($result->isPassed());
     }
 
-    public function testPartialMultipleAnswerIsIncorrect(): void
+    public function testSingleQuestionWithWrongAnswerGetsZeroScore(): void
+    {
+        $correctAnswer = new AnswerOption(1, '4', true);
+        $wrongAnswer = new AnswerOption(2, '5', false);
+
+        $question = new Question(
+            1,
+            '2 + 2 = ?',
+            [$correctAnswer, $wrongAnswer],
+            QuestionType::SINGLE,
+        );
+
+        $test = new Test(
+            1,
+            'Математика',
+            '',
+            [$question],
+            new TestConfiguration(
+                timeLimit: 60,
+                attemptsLimit: 1,
+                passingScore: 70,
+            ),
+        );
+
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            new DateTimeImmutable(),
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer($question, [$wrongAnswer])
+        );
+
+        $result = (new AttemptResultCalculator())->calculate($attempt);
+
+        self::assertSame(1, $result->getTotalQuestions());
+        self::assertSame(1, $result->getAnsweredQuestions());
+        self::assertSame(0, $result->getCorrectAnswers());
+        self::assertSame(0, $result->getScore());
+        self::assertFalse($result->isPassed());
+    }
+
+    public function testMultipleQuestionWithAllCorrectAnswersGetsFullScore(): void
     {
         $answer1 = new AnswerOption(1, '2', true);
         $answer2 = new AnswerOption(2, '3', false);
@@ -78,11 +114,8 @@ final class AttemptResultCalculatorTest extends TestCase
         $question = new Question(
             1,
             'Какие числа являются чётными?',
-            [
-                $answer1,
-                $answer2,
-                $answer3,
-            ],
+            [$answer1, $answer2, $answer3],
+            QuestionType::MULTIPLE,
         );
 
         $test = new Test(
@@ -90,33 +123,77 @@ final class AttemptResultCalculatorTest extends TestCase
             'Математика',
             '',
             [$question],
-            new TestConfiguration(30, 3, 100),
-        );
-
-        $attempt = new Attempt(
-            100,
-            $test,
-            500,
-            new DateTimeImmutable(),
-        );
-
-        // Выбран только один из двух правильных вариантов.
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question,
-                [$answer1],
+            new TestConfiguration(
+                timeLimit: 60,
+                attemptsLimit: 1,
+                passingScore: 70,
             ),
         );
 
-        $calculator = new AttemptResultCalculator();
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            new DateTimeImmutable(),
+        );
 
-        $result = $calculator->calculate($attempt);
+        $attempt->answerQuestion(
+            new UserAnswer($question, [$answer1, $answer3])
+        );
+
+        $result = (new AttemptResultCalculator())->calculate($attempt);
+
+        self::assertSame(1, $result->getTotalQuestions());
+        self::assertSame(1, $result->getAnsweredQuestions());
+        self::assertSame(1, $result->getCorrectAnswers());
+        self::assertSame(100, $result->getScore());
+        self::assertTrue($result->isPassed());
+    }
+
+    public function testMultipleQuestionWithPartiallySelectedCorrectAnswersIsIncorrect(): void
+    {
+        $answer1 = new AnswerOption(1, '2', true);
+        $answer2 = new AnswerOption(2, '3', false);
+        $answer3 = new AnswerOption(3, '4', true);
+
+        $question = new Question(
+            1,
+            'Какие числа являются чётными?',
+            [$answer1, $answer2, $answer3],
+            QuestionType::MULTIPLE,
+        );
+
+        $test = new Test(
+            1,
+            'Математика',
+            '',
+            [$question],
+            new TestConfiguration(
+                timeLimit: 60,
+                attemptsLimit: 1,
+                passingScore: 70,
+            ),
+        );
+
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            new DateTimeImmutable(),
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer($question, [$answer1])
+        );
+
+        $result = (new AttemptResultCalculator())->calculate($attempt);
 
         self::assertSame(0, $result->getCorrectAnswers());
         self::assertSame(0, $result->getScore());
         self::assertFalse($result->isPassed());
     }
-    public function testSelectingIncorrectAnswerAlongWithCorrectAnswersIsIncorrect(): void
+
+    public function testMultipleQuestionWithExtraWrongAnswerIsIncorrect(): void
     {
         $answer1 = new AnswerOption(1, '2', true);
         $answer2 = new AnswerOption(2, '3', false);
@@ -125,11 +202,8 @@ final class AttemptResultCalculatorTest extends TestCase
         $question = new Question(
             1,
             'Какие числа являются чётными?',
-            [
-                $answer1,
-                $answer2,
-                $answer3,
-            ],
+            [$answer1, $answer2, $answer3],
+            QuestionType::MULTIPLE,
         );
 
         $test = new Test(
@@ -137,29 +211,72 @@ final class AttemptResultCalculatorTest extends TestCase
             'Математика',
             '',
             [$question],
-            new TestConfiguration(30, 3, 100),
+            new TestConfiguration(
+                timeLimit: 60,
+                attemptsLimit: 1,
+                passingScore: 70,
+            ),
         );
 
         $attempt = new Attempt(
-            100,
+            1,
             $test,
-            500,
+            100,
             new DateTimeImmutable(),
         );
 
         $attempt->answerQuestion(
-            new UserAnswer(
-                $question,
-                [$answer1, $answer2, $answer3],
-            ),
+            new UserAnswer($question, [$answer1, $answer2, $answer3])
         );
 
-        $calculator = new AttemptResultCalculator();
-
-        $result = $calculator->calculate($attempt);
+        $result = (new AttemptResultCalculator())->calculate($attempt);
 
         self::assertSame(0, $result->getCorrectAnswers());
         self::assertSame(0, $result->getScore());
         self::assertFalse($result->isPassed());
+    }
+
+    public function testMultipleQuestionDoesNotDependOnAnswerOrder(): void
+    {
+        $answer1 = new AnswerOption(1, '2', true);
+        $answer2 = new AnswerOption(2, '3', false);
+        $answer3 = new AnswerOption(3, '4', true);
+
+        $question = new Question(
+            1,
+            'Какие числа являются чётными?',
+            [$answer1, $answer2, $answer3],
+            QuestionType::MULTIPLE,
+        );
+
+        $test = new Test(
+            1,
+            'Математика',
+            '',
+            [$question],
+            new TestConfiguration(
+                timeLimit: 60,
+                attemptsLimit: 1,
+                passingScore: 70,
+            ),
+        );
+
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            new DateTimeImmutable(),
+        );
+
+        // Правильные ответы выбраны в обратном порядке.
+        $attempt->answerQuestion(
+            new UserAnswer($question, [$answer3, $answer1])
+        );
+
+        $result = (new AttemptResultCalculator())->calculate($attempt);
+
+        self::assertSame(1, $result->getCorrectAnswers());
+        self::assertSame(100, $result->getScore());
+        self::assertTrue($result->isPassed());
     }
 }

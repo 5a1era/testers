@@ -44,22 +44,20 @@ final class UserAnswerTest extends TestCase
     public function testCanStoreMultipleSelectedAnswers(): void
     {
         $answer1 = new AnswerOption(1, '2', true);
-
         $answer2 = new AnswerOption(2, '3', false);
-
         $answer3 = new AnswerOption(3, '4', true);
 
         $question = new Question(
             1,
             'Какие числа являются чётными?',
-            [
-                $answer1,
-                $answer2,
-                $answer3,
-            ],
+            [$answer1, $answer2, $answer3],
+            QuestionType::MULTIPLE,
         );
 
-        $userAnswer = new UserAnswer($question, [$answer1, $answer3]);
+        $userAnswer = new UserAnswer(
+            $question,
+            [$answer1, $answer3],
+        );
 
         self::assertSame([$answer1, $answer3], $userAnswer->getAnswers());
     }
