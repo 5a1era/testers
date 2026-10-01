@@ -63,9 +63,9 @@ final class AttemptTest extends TestCase
 
         $attempt->finish(new DateTimeImmutable('2026-09-30 16:20:00'));
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
 
-        $attempt->finish(new DateTimeImmutable('2026-09-30 16:25:00'));
+        $attempt->finish(new DateTimeImmutable('2026-09-30 16:10:00'));
     }
 
     public function testAnswerCanBeAddedToAttempt(): void
@@ -84,7 +84,7 @@ final class AttemptTest extends TestCase
 
         $userAnswer = new UserAnswer($question, [$answer2]);
 
-        $attempt->answerQuestion($userAnswer);
+        $attempt->answerQuestion($userAnswer, new DateTimeImmutable('2026-09-30 16:00:15'));
 
         self::assertCount(1, $attempt->getAnswers());
         self::assertSame($userAnswer, $attempt->getAnswers()[0]);
@@ -113,7 +113,7 @@ final class AttemptTest extends TestCase
 
         $userAnswer = new UserAnswer($question, [$question->getAnswers()[1]]);
 
-        $attempt->answerQuestion($userAnswer);
+        $attempt->answerQuestion($userAnswer, new DateTimeImmutable('2026-10-01 10:10:00'));
 
         self::assertCount(1, $attempt->getAnswers());
 
@@ -154,16 +154,18 @@ final class AttemptTest extends TestCase
         $attempt->answerQuestion(
             new UserAnswer(
                 $question,
-                [$answer1],
-            )
+                [$answer1]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         // Потом изменил ответ на "4".
         $attempt->answerQuestion(
             new UserAnswer(
                 $question,
-                [$answer2],
-            )
+                [$answer2]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         self::assertCount(1, $attempt->getAnswers());
@@ -191,7 +193,7 @@ final class AttemptTest extends TestCase
 
         $this->expectException(LogicException::class);
 
-        $attempt->answerQuestion(new UserAnswer($question, [$answer]));
+        $attempt->answerQuestion(new UserAnswer($question, [$answer]), new DateTimeImmutable('2026-10-01 10:10:00'));
     }
 
     public function testCannotAnswerQuestionFromAnotherTest(): void
@@ -240,8 +242,194 @@ final class AttemptTest extends TestCase
         $attempt->answerQuestion(
             new UserAnswer(
                 $questionFromTestB,
-                [$questionFromTestB->getAnswers()[0]],
-            )
+                [$questionFromTestB->getAnswers()[0]]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
+    }
+    public function testCannotAnswerQuestionAfterTimeLimit(): void
+    {
+        $question = new Question(
+            1,
+            'Столица России?',
+            [
+                new AnswerOption(1, 'Москва', true),
+                new AnswerOption(2, 'Санкт-Петербург', false),
+            ],
+        );
+
+        $test = new Test(
+            id: 1,
+            title: 'Test',
+            description: 'Test',
+            questions: [$question],
+            configuration: new TestConfiguration(
+                timeLimit: 30 * 60,
+                attemptsLimit: 2,
+                passingScore: 70,
+            ),
+        );
+
+        $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
+
+        $attempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 100,
+            startedAt: $startedAt,
+        );
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIsOrContains(
+            'Cannot answer an expired attempt.'
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question,
+                [$question->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-01 10:30:01'),
+        );
+    }
+    public function testCannotAnswerQuestionExactlyAtTimeLimit(): void
+    {
+        $question = new Question(
+            1,
+            'Столица России?',
+            [
+                new AnswerOption(1, 'Москва', true),
+                new AnswerOption(2, 'Санкт-Петербург', false),
+            ],
+        );
+
+        $test = new Test(
+            id: 1,
+            title: 'Test',
+            description: 'Test',
+            questions: [$question],
+            configuration: new TestConfiguration(
+                timeLimit: 30 * 60,
+                attemptsLimit: 2,
+                passingScore: 70,
+            ),
+        );
+
+        $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
+
+        $attempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 100,
+            startedAt: $startedAt,
+        );
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIsOrContains(
+            'Cannot answer an expired attempt.'
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question,
+                [$question->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-01 10:30:00'),
+        );
+    }
+
+    public function testAttemptIsNotFinishedBeforeTimeLimit(): void
+    {
+        $test = new Test(
+            1,
+            'Test',
+            'Test',
+            [],
+            new TestConfiguration(30, 2, 80),
+        );
+
+        $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
+
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            $startedAt,
+        );
+
+        $result = $attempt->finishIfExpired(
+            new DateTimeImmutable('2026-10-01 10:00:29')
+        );
+
+        self::assertFalse($result);
+        self::assertFalse($attempt->isFinished());
+        self::assertNull($attempt->getFinishedAt());
+    }
+
+    public function testAttemptIsFinishedWhenTimeExpires(): void
+    {
+        $test = new Test(
+            1,
+            'Test',
+            'Test',
+            [],
+            new TestConfiguration(30, 2, 80),
+        );
+
+        $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
+
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            $startedAt,
+        );
+
+        $result = $attempt->finishIfExpired(
+            new DateTimeImmutable('2026-10-01 10:00:30')
+        );
+
+        self::assertTrue($result);
+        self::assertTrue($attempt->isFinished());
+
+        self::assertEquals(
+            new DateTimeImmutable('2026-10-01 10:00:30'),
+            $attempt->getFinishedAt()
+        );
+    }
+
+    public function testFinishedAttemptIsNotFinishedAgain(): void
+    {
+        $test = new Test(
+            1,
+            'Test',
+            'Test',
+            [],
+            new TestConfiguration(30, 2, 80),
+        );
+
+        $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
+
+        $attempt = new Attempt(
+            1,
+            $test,
+            100,
+            $startedAt,
+        );
+
+        $firstResult = $attempt->finishIfExpired(
+            new DateTimeImmutable('2026-10-01 10:00:30')
+        );
+
+        $finishedAt = $attempt->getFinishedAt();
+
+        $secondResult = $attempt->finishIfExpired(
+            new DateTimeImmutable('2026-10-01 10:01:00')
+        );
+
+        self::assertTrue($firstResult);
+        self::assertFalse($secondResult);
+        self::assertTrue($attempt->isFinished());
+        self::assertSame($finishedAt, $attempt->getFinishedAt());
     }
 }

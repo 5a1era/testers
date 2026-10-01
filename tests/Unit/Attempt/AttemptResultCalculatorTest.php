@@ -49,7 +49,8 @@ final class AttemptResultCalculatorTest extends TestCase
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$correctAnswer])
+            new UserAnswer($question, [$correctAnswer]),
+            new DateTimeImmutable('2026-10-01 10:31:00'),
         );
 
         $result = (new AttemptResultCalculator())->calculate($attempt);
@@ -93,7 +94,8 @@ final class AttemptResultCalculatorTest extends TestCase
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$wrongAnswer])
+            new UserAnswer($question, [$wrongAnswer]),
+            new DateTimeImmutable('2026-10-01 10:31:00'),
         );
 
         $result = (new AttemptResultCalculator())->calculate($attempt);
@@ -138,7 +140,8 @@ final class AttemptResultCalculatorTest extends TestCase
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$answer1, $answer3])
+            new UserAnswer($question, [$answer1, $answer3]),
+            new DateTimeImmutable('2026-10-01 10:31:00'),
         );
 
         $result = (new AttemptResultCalculator())->calculate($attempt);
@@ -183,7 +186,8 @@ final class AttemptResultCalculatorTest extends TestCase
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$answer1])
+            new UserAnswer($question, [$answer1]),
+            new DateTimeImmutable('2026-10-01 10:31:00'),
         );
 
         $result = (new AttemptResultCalculator())->calculate($attempt);
@@ -226,7 +230,8 @@ final class AttemptResultCalculatorTest extends TestCase
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$answer1, $answer2, $answer3])
+            new UserAnswer($question, [$answer1, $answer2, $answer3]),
+            new DateTimeImmutable('2026-10-01 10:31:00'),
         );
 
         $result = (new AttemptResultCalculator())->calculate($attempt);
@@ -270,7 +275,8 @@ final class AttemptResultCalculatorTest extends TestCase
 
         // Правильные ответы выбраны в обратном порядке.
         $attempt->answerQuestion(
-            new UserAnswer($question, [$answer3, $answer1])
+            new UserAnswer($question, [$answer3, $answer1]),
+            new DateTimeImmutable('2026-10-01 10:31:00'),
         );
 
         $result = (new AttemptResultCalculator())->calculate($attempt);

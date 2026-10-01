@@ -116,40 +116,45 @@ final class FullTestPassingTest extends TestCase
         $attempt->answerQuestion(
             new UserAnswer(
                 $question1,
-                [$q1Answer1],
-            )
+                [$q1Answer1]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         // Вопрос 2 — правильно
         $attempt->answerQuestion(
             new UserAnswer(
                 $question2,
-                [$q2Answer2],
-            )
+                [$q2Answer2]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         // Вопрос 3 — неправильно
         $attempt->answerQuestion(
             new UserAnswer(
                 $question3,
-                [$q3Answer2],
-            )
+                [$q3Answer2]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         // Вопрос 4 — MULTIPLE, оба правильных ответа
         $attempt->answerQuestion(
             new UserAnswer(
                 $question4,
-                [$q4Answer1, $q4Answer3],
-            )
+                [$q4Answer1, $q4Answer3]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         // Вопрос 5 — неправильно
         $attempt->answerQuestion(
             new UserAnswer(
                 $question5,
-                [$q5Answer1],
-            )
+                [$q5Answer1]
+            ),
+            new DateTimeImmutable('2026-10-01 10:10:00')
         );
 
         /*
@@ -165,119 +170,6 @@ final class FullTestPassingTest extends TestCase
         $calculator = new AttemptResultCalculator();
 
         $result = $calculator->calculate($attempt);
-
-        /*
-         * 5. Выводим результат в консоль
-         */
-
-        fwrite(STDOUT, PHP_EOL);
-        fwrite(STDOUT, "===============================" . PHP_EOL);
-        fwrite(STDOUT, "       РЕЗУЛЬТАТ ТЕСТА         " . PHP_EOL);
-        fwrite(STDOUT, "===============================" . PHP_EOL);
-
-        fwrite(
-            STDOUT,
-            "Тест: {$test->getTitle()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Пользователь: {$attempt->getUserId()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Всего вопросов: {$result->getTotalQuestions()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Отвечено: {$result->getAnsweredQuestions()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Правильных ответов: {$result->getCorrectAnswers()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Результат: {$result->getScore()}%" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Статус: " . ($result->isPassed() ? 'ПРОЙДЕН' : 'НЕ ПРОЙДЕН') . PHP_EOL
-        );
-
-        fwrite(STDOUT, "===============================" . PHP_EOL);
-        fwrite(STDOUT, PHP_EOL);
-
-        fwrite(STDOUT, PHP_EOL);
-        fwrite(STDOUT, "========================================" . PHP_EOL);
-        fwrite(STDOUT, "          РЕЗУЛЬТАТ ТЕСТА              " . PHP_EOL);
-        fwrite(STDOUT, "========================================" . PHP_EOL);
-
-        fwrite(
-            STDOUT,
-            "Тест: {$test->getTitle()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Пользователь: {$attempt->getUserId()}" . PHP_EOL
-        );
-
-        fwrite(STDOUT, PHP_EOL);
-        fwrite(STDOUT, "Ответы:" . PHP_EOL);
-        fwrite(STDOUT, "----------------------------------------" . PHP_EOL);
-
-        foreach ($attempt->getAnswers() as $userAnswer) {
-            $question = $userAnswer->getQuestion();
-            $isCorrect = $calculator->isCorrect($userAnswer);
-
-            $status = $isCorrect ? '✓' : '✗';
-
-            fwrite(
-                STDOUT,
-                sprintf(
-                    "%s %d. %s \n",
-                    $status,
-                    $question->getId(),
-                    $question->getText()
-                )
-            );
-        }
-
-        fwrite(STDOUT, PHP_EOL);
-        fwrite(STDOUT, "----------------------------------------" . PHP_EOL);
-
-        fwrite(
-            STDOUT,
-            "Всего вопросов: {$result->getTotalQuestions()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Отвечено: {$result->getAnsweredQuestions()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Правильных: {$result->getCorrectAnswers()}" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Результат: {$result->getScore()}%" . PHP_EOL
-        );
-
-        fwrite(
-            STDOUT,
-            "Статус: " . ($result->isPassed() ? 'ПРОЙДЕН' : 'НЕ ПРОЙДЕН') . PHP_EOL
-        );
-
-        fwrite(STDOUT, "========================================" . PHP_EOL);
 
         self::assertSame(5, $result->getTotalQuestions());
         self::assertSame(5, $result->getAnsweredQuestions());

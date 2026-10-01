@@ -74,11 +74,19 @@ final class Attempt
         return $this->answers;
     }
 
-    public function answerQuestion(UserAnswer $userAnswer): void
-    {
+    public function answerQuestion(
+        UserAnswer $userAnswer,
+        DateTimeImmutable $now,
+    ): void {
         if ($this->isFinished()) {
             throw new LogicException(
                 'Cannot answer a finished attempt.'
+            );
+        }
+
+        if ($this->isExpired($now)) {
+            throw new LogicException(
+                'Cannot answer an expired attempt.'
             );
         }
 
@@ -120,5 +128,24 @@ final class Attempt
         );
 
         return $now >= $finishTime;
+    }
+
+    public function finishIfExpired(DateTimeImmutable $now): bool
+    {
+        if ($this->isFinished()) {
+            return false;
+        }
+
+        if (!$this->isExpired($now)) {
+            return false;
+        }
+
+        $this->finish(
+            $this->startedAt->modify(
+                '+' . $this->test->getConfiguration()->getTimeLimit() . ' seconds'
+            )
+        );
+
+        return true;
     }
 }
