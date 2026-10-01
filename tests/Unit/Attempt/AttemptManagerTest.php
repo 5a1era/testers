@@ -201,6 +201,7 @@ final class AttemptManagerTest extends TestCase
                 timeLimit: 1800,
                 attemptsLimit: $attemptsLimit,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
     }

@@ -81,6 +81,7 @@ final class FullTestPassingTest extends TestCase
             timeLimit: 30 * 60,
             attemptsLimit: 2,
             passingScore: 80,
+            questionsCount: 10,
         );
 
         $test = new Test(

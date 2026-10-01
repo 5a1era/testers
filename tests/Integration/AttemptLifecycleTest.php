@@ -93,6 +93,7 @@ final class AttemptLifecycleTest extends TestCase
                 timeLimit: 30,
                 attemptsLimit: 2,
                 passingScore: 70,
+                questionsCount: 10
             ),
         );
 
@@ -249,6 +250,7 @@ final class AttemptLifecycleTest extends TestCase
                 timeLimit: 30,
                 attemptsLimit: 2,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 

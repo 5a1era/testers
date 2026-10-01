@@ -14,7 +14,7 @@ final class TestTest extends TestCase
 {
     public function testTestContainsQuestions(): void
     {
-        $configuration = new TestConfiguration(30, 1, 80);
+        $configuration = new TestConfiguration(30, 1, 80, 10);
 
         $question1 = new Question(
             1,

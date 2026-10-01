@@ -81,6 +81,7 @@ final class IncompleteAttemptTest extends TestCase
                 timeLimit: 30 * 60,
                 attemptsLimit: 2,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -140,6 +141,7 @@ final class IncompleteAttemptTest extends TestCase
                 timeLimit: 30 * 60,
                 attemptsLimit: 2,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 

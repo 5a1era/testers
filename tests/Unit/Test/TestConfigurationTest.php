@@ -11,7 +11,7 @@ final class TestConfigurationTest extends TestCase
 {
     public function testConfigurationCanBeCreated(): void
     {
-        $configuration = new TestConfiguration(30, 2, 70);
+        $configuration = new TestConfiguration(30, 2, 70, 10);
 
         self::assertSame(30, $configuration->getTimeLimit());
         self::assertSame(2, $configuration->getAttemptsLimit());
@@ -22,27 +22,27 @@ final class TestConfigurationTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        new TestConfiguration(0, 2, 70);
+        new TestConfiguration(0, 2, 70, 10);
     }
 
     public function testAttemptsLimitMustBePositive(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        new TestConfiguration(30, 0, 70);
+        new TestConfiguration(30, 0, 70, 10);
     }
 
     public function testPassingScoreCannotBeLessThanZero(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        new TestConfiguration(30, 2, -1);
+        new TestConfiguration(30, 2, -1, 10);
     }
 
     public function testPassingScoreCannotBeGreaterThanOneHundred(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        new TestConfiguration(30, 2, 101);
+        new TestConfiguration(30, 2, 101, 10);
     }
 }

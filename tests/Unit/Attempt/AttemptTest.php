@@ -18,7 +18,7 @@ final class AttemptTest extends TestCase
 {
     public function testAttemptCanBeCreated(): void
     {
-        $configuration = new TestConfiguration(30, 2, 70);
+        $configuration = new TestConfiguration(30, 2, 70, 10);
 
         $test = new Test(1, 'Математика', 'Базовый тест', [], $configuration);
 
@@ -37,7 +37,7 @@ final class AttemptTest extends TestCase
 
     public function testAttemptCanBeFinished(): void
     {
-        $configuration = new TestConfiguration(30, 2, 80);
+        $configuration = new TestConfiguration(30, 2, 80, 10);
 
         $test = new Test(1, 'Математика', 'Базовый тест', [], $configuration);
 
@@ -55,7 +55,7 @@ final class AttemptTest extends TestCase
 
     public function testFinishedAttemptCannotBeFinishedAgain(): void
     {
-        $configuration = new TestConfiguration(30, 2, 80);
+        $configuration = new TestConfiguration(30, 2, 80, 10);
 
         $test = new Test(1, 'Математика', 'Базовый тест', [], $configuration);
 
@@ -76,7 +76,7 @@ final class AttemptTest extends TestCase
 
         $question = new Question(1, 'Сколько будет 2 + 2?', [$answer1, $answer2]);
 
-        $configuration = new TestConfiguration(30, 2, 80);
+        $configuration = new TestConfiguration(30, 2, 80, 10);
 
         $test = new Test(1, 'Математика', 'Базовый тест', [$question], $configuration);
 
@@ -106,7 +106,7 @@ final class AttemptTest extends TestCase
             'Математика',
             'Базовый тест',
             [$question],
-            new TestConfiguration(30, 2, 70),
+            new TestConfiguration(30, 2, 70, 10),
         );
 
         $attempt = new Attempt(1, $test, 100, new DateTimeImmutable());
@@ -140,7 +140,7 @@ final class AttemptTest extends TestCase
             'Математика',
             'Базовый тест',
             [$question],
-            new TestConfiguration(30, 2, 70),
+            new TestConfiguration(30, 2, 70, 10),
         );
 
         $attempt = new Attempt(
@@ -184,7 +184,7 @@ final class AttemptTest extends TestCase
             'Математика',
             'Базовый тест',
             [$question],
-            new TestConfiguration(30, 2, 70),
+            new TestConfiguration(30, 2, 70, 10),
         );
 
         $attempt = new Attempt(1, $test, 100, new DateTimeImmutable());
@@ -219,7 +219,7 @@ final class AttemptTest extends TestCase
             'Тест A',
             'Описание',
             [$questionFromTestA],
-            new TestConfiguration(30, 2, 70),
+            new TestConfiguration(30, 2, 70, 10),
         );
 
         $testB = new Test(
@@ -227,7 +227,7 @@ final class AttemptTest extends TestCase
             'Тест B',
             'Описание',
             [$questionFromTestB],
-            new TestConfiguration(30, 2, 70),
+            new TestConfiguration(30, 2, 70, 10),
         );
 
         $attempt = new Attempt(
@@ -267,6 +267,7 @@ final class AttemptTest extends TestCase
                 timeLimit: 30 * 60,
                 attemptsLimit: 2,
                 passingScore: 70,
+                questionsCount: 10
             ),
         );
 
@@ -312,6 +313,7 @@ final class AttemptTest extends TestCase
                 timeLimit: 30 * 60,
                 attemptsLimit: 2,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -345,7 +347,7 @@ final class AttemptTest extends TestCase
             'Test',
             'Test',
             [],
-            new TestConfiguration(30, 2, 80),
+            new TestConfiguration(30, 2, 80, 10),
         );
 
         $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
@@ -373,7 +375,7 @@ final class AttemptTest extends TestCase
             'Test',
             'Test',
             [],
-            new TestConfiguration(30, 2, 80),
+            new TestConfiguration(30, 2, 80, 10),
         );
 
         $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');
@@ -405,7 +407,7 @@ final class AttemptTest extends TestCase
             'Test',
             'Test',
             [],
-            new TestConfiguration(30, 2, 80),
+            new TestConfiguration(30, 2, 80, 10),
         );
 
         $startedAt = new DateTimeImmutable('2026-10-01 10:00:00');

@@ -38,6 +38,7 @@ final class AttemptResultCalculatorTest extends TestCase
                 timeLimit: 60,
                 attemptsLimit: 1,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -83,6 +84,7 @@ final class AttemptResultCalculatorTest extends TestCase
                 timeLimit: 60,
                 attemptsLimit: 1,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -129,6 +131,7 @@ final class AttemptResultCalculatorTest extends TestCase
                 timeLimit: 60,
                 attemptsLimit: 1,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -175,6 +178,7 @@ final class AttemptResultCalculatorTest extends TestCase
                 timeLimit: 60,
                 attemptsLimit: 1,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -219,6 +223,7 @@ final class AttemptResultCalculatorTest extends TestCase
                 timeLimit: 60,
                 attemptsLimit: 1,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
@@ -263,6 +268,7 @@ final class AttemptResultCalculatorTest extends TestCase
                 timeLimit: 60,
                 attemptsLimit: 1,
                 passingScore: 70,
+                questionsCount: 10,
             ),
         );
 
