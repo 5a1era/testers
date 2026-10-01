@@ -6,6 +6,7 @@ namespace Elros\Testing\Tests\Unit\Question;
 
 use Elros\Testing\Question\AnswerOption;
 use Elros\Testing\Question\Question;
+use Elros\Testing\Question\QuestionType;
 use PHPUnit\Framework\TestCase;
 
 final class QuestionTest extends TestCase
@@ -27,5 +28,24 @@ final class QuestionTest extends TestCase
 
         self::assertCount(3, $question->getAnswers());
         self::assertSame('4', $question->getAnswers()[1]->getText());
+    }
+
+    public function testQuestionHasSingleAnswerTypeByDefault(): void
+    {
+        $question = new Question(1, '2 + 2 = ?', []);
+
+        self::assertSame(QuestionType::SINGLE, $question->getType());
+    }
+
+    public function testQuestionCanHaveMultipleAnswerType(): void
+    {
+        $question = new Question(
+            1,
+            'Какие числа являются чётными?',
+            [],
+            QuestionType::MULTIPLE,
+        );
+
+        self::assertSame(QuestionType::MULTIPLE, $question->getType());
     }
 }

@@ -13,6 +13,7 @@ final class Question
         private readonly int $id,
         private string $text,
         private array $answers,
+        private QuestionType $type = QuestionType::SINGLE
     ) {}
 
     public function getId(): int
@@ -31,5 +32,10 @@ final class Question
     public function getAnswers(): array
     {
         return $this->answers;
+    }
+
+    public function getType(): QuestionType
+    {
+        return $this->type;
     }
 }
