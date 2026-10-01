@@ -112,4 +112,13 @@ final class Attempt
 
         return false;
     }
+
+    public function isExpired(DateTimeImmutable $now): bool
+    {
+        $finishTime = $this->startedAt->modify(
+            '+' . $this->test->getConfiguration()->getTimeLimit() . ' seconds'
+        );
+
+        return $now >= $finishTime;
+    }
 }
