@@ -6,6 +6,7 @@ namespace Elros\Testing\Attempt;
 
 use Elros\Testing\Test\Test;
 use DateTimeImmutable;
+use Elros\Testing\Question\Question;
 use LogicException;
 
 final class Attempt
@@ -65,11 +66,25 @@ final class Attempt
         $this->finishedAt = $finishedAt;
     }
 
+    /**
+     * @return UserAnswer[]
+     */
+    public function getAnswers(): array
+    {
+        return $this->answers;
+    }
+
     public function answerQuestion(UserAnswer $userAnswer): void
     {
         if ($this->isFinished()) {
             throw new LogicException(
                 'Cannot answer a finished attempt.'
+            );
+        }
+
+        if (!$this->hasQuestion($userAnswer->getQuestion())) {
+            throw new \LogicException(
+                'Question does not belong to this test.'
             );
         }
 
@@ -87,11 +102,14 @@ final class Attempt
         $this->answers[] = $userAnswer;
     }
 
-    /**
-     * @return UserAnswer[]
-     */
-    public function getAnswers(): array
+    private function hasQuestion(Question $question): bool
     {
-        return $this->answers;
+        foreach ($this->test->getQuestions() as $testQuestion) {
+            if ($testQuestion->getId() === $question->getId()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

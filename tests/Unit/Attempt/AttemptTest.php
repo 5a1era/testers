@@ -193,4 +193,55 @@ final class AttemptTest extends TestCase
 
         $attempt->answerQuestion(new UserAnswer($question, $answer));
     }
+
+    public function testCannotAnswerQuestionFromAnotherTest(): void
+    {
+        $questionFromTestA = new Question(
+            1,
+            'Вопрос теста A',
+            [
+                new AnswerOption(1, 'Ответ', true),
+            ],
+        );
+
+        $questionFromTestB = new Question(
+            2,
+            'Вопрос теста B',
+            [
+                new AnswerOption(2, 'Ответ', true),
+            ],
+        );
+
+        $testA = new Test(
+            1,
+            'Тест A',
+            'Описание',
+            [$questionFromTestA],
+            new TestConfiguration(30, 2, 70),
+        );
+
+        $testB = new Test(
+            2,
+            'Тест B',
+            'Описание',
+            [$questionFromTestB],
+            new TestConfiguration(30, 2, 70),
+        );
+
+        $attempt = new Attempt(
+            1,
+            $testA,
+            100,
+            new DateTimeImmutable(),
+        );
+
+        $this->expectException(LogicException::class);
+
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $questionFromTestB,
+                $questionFromTestB->getAnswers()[0],
+            )
+        );
+    }
 }
