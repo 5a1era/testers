@@ -19,19 +19,31 @@ final class AttemptManager
         array $attempts,
         DateTimeImmutable $startedAt,
     ): Attempt {
-        $userAttemptsCount = 0;
+        $userAttempts = [];
 
         foreach ($attempts as $attempt) {
             if (
-                $attempt->getTest()->getId() === $test->getId()
-                && $attempt->getUserId() === $userId
+                $attempt->getTest()->getId() !== $test->getId()
+                || $attempt->getUserId() !== $userId
             ) {
-                $userAttemptsCount++;
+                continue;
+            }
+
+            $userAttempts[] = $attempt;
+        }
+
+        foreach ($userAttempts as $attempt) {
+            if (!$attempt->isFinished()) {
+                $attempt->finishIfExpired($startedAt);
+
+                if (!$attempt->isFinished()) {
+                    return $attempt;
+                }
             }
         }
 
         if (
-            $userAttemptsCount
+            count($userAttempts)
             >= $test->getConfiguration()->getAttemptsLimit()
         ) {
             throw new LogicException(

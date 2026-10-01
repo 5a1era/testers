@@ -204,4 +204,102 @@ final class AttemptManagerTest extends TestCase
             ),
         );
     }
+    public function testActiveAttemptIsReturned(): void
+    {
+        $test = $this->createTest(attemptsLimit: 2);
+
+        $activeAttempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 100,
+            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
+        );
+
+        $manager = new AttemptManager();
+
+        $attempt = $manager->start(
+            test: $test,
+            userId: 100,
+            attempts: [$activeAttempt],
+            startedAt: new DateTimeImmutable('2026-10-01 10:10:00'),
+        );
+
+        self::assertSame($activeAttempt, $attempt);
+    }
+
+    public function testExpiredAttemptIsFinishedAndNewAttemptCanBeStarted(): void
+    {
+        $test = $this->createTest(
+            attemptsLimit: 2,
+        );
+
+        $expiredAttempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 100,
+            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
+        );
+
+        $manager = new AttemptManager();
+
+        $newAttempt = $manager->start(
+            test: $test,
+            userId: 100,
+            attempts: [$expiredAttempt],
+            startedAt: new DateTimeImmutable('2026-10-01 10:30:00'),
+        );
+
+        self::assertTrue($expiredAttempt->isFinished());
+        self::assertSame(
+            '2026-10-01 10:30:00',
+            $expiredAttempt->getFinishedAt()?->format('Y-m-d H:i:s')
+        );
+
+        self::assertNotSame($expiredAttempt, $newAttempt);
+        self::assertSame(2, $newAttempt->getId());
+    }
+
+    public function testNewAttemptCannotBeStartedAfterLimitIsReached(): void
+    {
+        $test = $this->createTest(attemptsLimit: 2);
+
+        $firstAttempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 100,
+            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
+        );
+
+        $firstAttempt->finish(
+            new DateTimeImmutable('2026-10-01 10:20:00')
+        );
+
+        $secondAttempt = new Attempt(
+            id: 2,
+            test: $test,
+            userId: 100,
+            startedAt: new DateTimeImmutable('2026-10-01 11:00:00'),
+        );
+
+        $secondAttempt->finish(
+            new DateTimeImmutable('2026-10-01 11:20:00')
+        );
+
+        $manager = new AttemptManager();
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIsOrContains(
+            'Attempts limit has been reached.'
+        );
+
+        $manager->start(
+            test: $test,
+            userId: 100,
+            attempts: [
+                $firstAttempt,
+                $secondAttempt,
+            ],
+            startedAt: new DateTimeImmutable('2026-10-01 12:00:00'),
+        );
+    }
 }
