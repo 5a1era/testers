@@ -16,7 +16,7 @@ final class AttemptResultCalculator
         $correctAnswers = 0;
 
         foreach ($answers as $userAnswer) {
-            if ($this->isCorrectAnswer($userAnswer)) {
+            if ($this->isCorrect($userAnswer)) {
                 $correctAnswers++;
             }
         }
@@ -41,7 +41,7 @@ final class AttemptResultCalculator
         );
     }
 
-    private function isCorrectAnswer(UserAnswer $userAnswer): bool
+    public function isCorrect(UserAnswer $userAnswer): bool
     {
         $correctAnswerIds = [];
 

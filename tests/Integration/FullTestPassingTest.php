@@ -213,9 +213,71 @@ final class FullTestPassingTest extends TestCase
         fwrite(STDOUT, "===============================" . PHP_EOL);
         fwrite(STDOUT, PHP_EOL);
 
-        /*
-         * 10. Проверяем результат
-         */
+        fwrite(STDOUT, PHP_EOL);
+        fwrite(STDOUT, "========================================" . PHP_EOL);
+        fwrite(STDOUT, "          РЕЗУЛЬТАТ ТЕСТА              " . PHP_EOL);
+        fwrite(STDOUT, "========================================" . PHP_EOL);
+
+        fwrite(
+            STDOUT,
+            "Тест: {$test->getTitle()}" . PHP_EOL
+        );
+
+        fwrite(
+            STDOUT,
+            "Пользователь: {$attempt->getUserId()}" . PHP_EOL
+        );
+
+        fwrite(STDOUT, PHP_EOL);
+        fwrite(STDOUT, "Ответы:" . PHP_EOL);
+        fwrite(STDOUT, "----------------------------------------" . PHP_EOL);
+
+        foreach ($attempt->getAnswers() as $userAnswer) {
+            $question = $userAnswer->getQuestion();
+            $isCorrect = $calculator->isCorrect($userAnswer);
+
+            $status = $isCorrect ? '✓' : '✗';
+
+            fwrite(
+                STDOUT,
+                sprintf(
+                    "%s %d. %s \n",
+                    $status,
+                    $question->getId(),
+                    $question->getText()
+                )
+            );
+        }
+
+        fwrite(STDOUT, PHP_EOL);
+        fwrite(STDOUT, "----------------------------------------" . PHP_EOL);
+
+        fwrite(
+            STDOUT,
+            "Всего вопросов: {$result->getTotalQuestions()}" . PHP_EOL
+        );
+
+        fwrite(
+            STDOUT,
+            "Отвечено: {$result->getAnsweredQuestions()}" . PHP_EOL
+        );
+
+        fwrite(
+            STDOUT,
+            "Правильных: {$result->getCorrectAnswers()}" . PHP_EOL
+        );
+
+        fwrite(
+            STDOUT,
+            "Результат: {$result->getScore()}%" . PHP_EOL
+        );
+
+        fwrite(
+            STDOUT,
+            "Статус: " . ($result->isPassed() ? 'ПРОЙДЕН' : 'НЕ ПРОЙДЕН') . PHP_EOL
+        );
+
+        fwrite(STDOUT, "========================================" . PHP_EOL);
 
         self::assertSame(5, $result->getTotalQuestions());
         self::assertSame(5, $result->getAnsweredQuestions());
