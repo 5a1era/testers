@@ -83,7 +83,7 @@ final class Attempt
         }
 
         if (!$this->hasQuestion($userAnswer->getQuestion())) {
-            throw new \LogicException(
+            throw new LogicException(
                 'Question does not belong to this test.'
             );
         }
