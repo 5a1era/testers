@@ -12,6 +12,7 @@ final class TestConfiguration
         private readonly int $timeLimit,
         private readonly int $attemptsLimit,
         private readonly int $passingScore,
+        private readonly int $questionsCount,
     ) {
         if ($this->timeLimit <= 0) {
             throw new InvalidArgumentException(
@@ -30,6 +31,12 @@ final class TestConfiguration
                 'Passing score must be between 0 and 100.'
             );
         }
+
+        if ($this->questionsCount <= 0) {
+            throw new InvalidArgumentException(
+                'Questions count must be greater than zero.'
+            );
+        }
     }
 
     public function getTimeLimit(): int
@@ -45,5 +52,10 @@ final class TestConfiguration
     public function getPassingScore(): int
     {
         return $this->passingScore;
+    }
+
+    public function getQuestionsCount(): int
+    {
+        return $this->questionsCount;
     }
 }
