@@ -22,6 +22,7 @@ final class Attempt
         private readonly Test $test,
         private readonly int $userId,
         private readonly DateTimeImmutable $startedAt,
+        private readonly array $questions,
         private ?DateTimeImmutable $finishedAt = null,
     ) {}
 
@@ -43,6 +44,14 @@ final class Attempt
     public function getStartedAt(): DateTimeImmutable
     {
         return $this->startedAt;
+    }
+
+    /**
+     * @return Question[]
+     */
+    public function getQuestions(): array
+    {
+        return $this->questions;
     }
 
     public function getFinishedAt(): ?DateTimeImmutable
@@ -112,7 +121,7 @@ final class Attempt
 
     private function hasQuestion(Question $question): bool
     {
-        foreach ($this->test->getQuestions() as $testQuestion) {
+        foreach ($this->questions as $testQuestion) {
             if ($testQuestion->getId() === $question->getId()) {
                 return true;
             }
