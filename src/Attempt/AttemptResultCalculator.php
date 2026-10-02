@@ -8,7 +8,7 @@ final class AttemptResultCalculator
 {
     public function calculate(Attempt $attempt): AttemptResult
     {
-        $questions = $attempt->getTest()->getQuestions();
+        $questions = $attempt->getQuestions();
         $answers = $attempt->getAnswers();
 
         $totalQuestions = count($questions);

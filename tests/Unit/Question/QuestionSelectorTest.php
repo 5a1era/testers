@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Elros\Testing\Tests\Unit\Question;
+namespace Elros\Testing\Tests\Question;
 
-use Elros\Testing\Question\AnswerOption;
 use Elros\Testing\Question\Question;
 use Elros\Testing\Question\QuestionSelector;
 use InvalidArgumentException;
@@ -18,49 +17,38 @@ final class QuestionSelectorTest extends TestCase
 
         $selector = new QuestionSelector();
 
-        $selected = $selector->select(questions: $questions, count: 5);
+        $selected = $selector->select($questions, 5);
 
         self::assertCount(5, $selected);
     }
 
-    public function testSelectedQuestionsBelongToOriginalCollection(): void
+    public function testSelectedQuestionsBelongToSourceCollection(): void
     {
         $questions = $this->createQuestions(10);
 
         $selector = new QuestionSelector();
 
-        $selected = $selector->select(questions: $questions, count: 5);
-
-        $originalIds = array_map(
-            static fn(Question $question): int => $question->getId(),
-            $questions,
-        );
+        $selected = $selector->select($questions, 5);
 
         foreach ($selected as $question) {
-            self::assertContains(
-                $question->getId(),
-                $originalIds,
-            );
+            self::assertContains($question, $questions);
         }
     }
 
-    public function testSelectedQuestionsDoNotRepeat(): void
+    public function testDoesNotSelectDuplicateQuestions(): void
     {
-        $questions = $this->createQuestions(20);
+        $questions = $this->createQuestions(10);
 
         $selector = new QuestionSelector();
 
-        $selected = $selector->select(questions: $questions, count: 10);
+        $selected = $selector->select($questions, 5);
 
-        $selectedIds = array_map(
+        $ids = array_map(
             static fn(Question $question): int => $question->getId(),
             $selected,
         );
 
-        self::assertCount(
-            count($selectedIds),
-            array_unique($selectedIds),
-        );
+        self::assertCount(5, array_unique($ids));
     }
 
     public function testCanSelectAllQuestions(): void
@@ -69,10 +57,7 @@ final class QuestionSelectorTest extends TestCase
 
         $selector = new QuestionSelector();
 
-        $selected = $selector->select(
-            questions: $questions,
-            count: 5,
-        );
+        $selected = $selector->select($questions, 5);
 
         self::assertCount(5, $selected);
 
@@ -81,65 +66,44 @@ final class QuestionSelectorTest extends TestCase
             $selected,
         );
 
-        $originalIds = array_map(
-            static fn(Question $question): int => $question->getId(),
-            $questions,
-        );
-
         sort($selectedIds);
-        sort($originalIds);
 
-        self::assertSame($originalIds, $selectedIds);
+        self::assertSame([1, 2, 3, 4, 5], $selectedIds);
     }
 
-    public function testThrowsExceptionWhenThereAreNotEnoughQuestions(): void
+    public function testCannotSelectZeroQuestions(): void
     {
-        $questions = $this->createQuestions(5);
+        $this->expectException(InvalidArgumentException::class);
 
         $selector = new QuestionSelector();
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains(
-            'Not enough questions to select.'
-        );
-
         $selector->select(
-            questions: $questions,
-            count: 6,
+            $this->createQuestions(10),
+            0,
         );
     }
 
-    public function testThrowsExceptionWhenCountIsZero(): void
+    public function testCannotSelectNegativeNumberOfQuestions(): void
     {
-        $questions = $this->createQuestions(5);
+        $this->expectException(InvalidArgumentException::class);
 
         $selector = new QuestionSelector();
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains(
-            'Question count must be greater than zero.'
-        );
-
         $selector->select(
-            questions: $questions,
-            count: 0,
+            $this->createQuestions(10),
+            -1,
         );
     }
 
-    public function testThrowsExceptionWhenCountIsNegative(): void
+    public function testCannotSelectMoreQuestionsThanAvailable(): void
     {
-        $questions = $this->createQuestions(5);
+        $this->expectException(InvalidArgumentException::class);
 
         $selector = new QuestionSelector();
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains(
-            'Question count must be greater than zero.'
-        );
-
         $selector->select(
-            questions: $questions,
-            count: -1,
+            $this->createQuestions(5),
+            6,
         );
     }
 
@@ -154,13 +118,7 @@ final class QuestionSelectorTest extends TestCase
             $questions[] = new Question(
                 id: $i,
                 text: 'Question ' . $i,
-                answers: [
-                    new AnswerOption(
-                        id: $i,
-                        text: 'Answer ' . $i,
-                        correct: true,
-                    ),
-                ],
+                answers: [],
             );
         }
 

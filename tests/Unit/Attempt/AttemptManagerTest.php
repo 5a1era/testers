@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Elros\Testing\Tests\Unit\Attempt;
+namespace Elros\Testing\Tests\Attempt;
 
 use Elros\Testing\Attempt\Attempt;
 use Elros\Testing\Attempt\AttemptManager;
-use Elros\Testing\Question\AnswerOption;
 use Elros\Testing\Question\Question;
+use Elros\Testing\Question\QuestionSelector;
 use Elros\Testing\Test\Test;
 use Elros\Testing\Test\TestConfiguration;
 use DateTimeImmutable;
@@ -16,291 +16,339 @@ use PHPUnit\Framework\TestCase;
 
 final class AttemptManagerTest extends TestCase
 {
-    public function testFirstAttemptCanBeStarted(): void
-    {
-        $test = $this->createTest(attemptsLimit: 2);
-
-        $manager = new AttemptManager();
-
-        $attempt = $manager->start(
-            test: $test,
-            userId: 100,
-            attempts: [],
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
-        );
-
-        self::assertSame(1, $attempt->getId());
-        self::assertSame(100, $attempt->getUserId());
-        self::assertSame($test, $attempt->getTest());
-        self::assertSame(
-            '2026-10-01 10:00:00',
-            $attempt->getStartedAt()->format('Y-m-d H:i:s')
-        );
-    }
-
-    public function testSecondAttemptCanBeStartedWhenLimitIsTwo(): void
-    {
-        $test = $this->createTest(attemptsLimit: 2);
-
-        $firstAttempt = new Attempt(
-            id: 1,
-            test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
-        );
-
-        $manager = new AttemptManager();
-
-        $secondAttempt = $manager->start(
-            test: $test,
-            userId: 100,
-            attempts: [$firstAttempt],
-            startedAt: new DateTimeImmutable('2026-10-01 11:00:00'),
-        );
-
-        self::assertSame(2, $secondAttempt->getId());
-    }
-
-    public function testThirdAttemptCannotBeStartedWhenLimitIsTwo(): void
-    {
-        $test = $this->createTest(attemptsLimit: 2);
-
-        $firstAttempt = new Attempt(
-            id: 1,
-            test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
-        );
-
-        $secondAttempt = new Attempt(
-            id: 2,
-            test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 11:00:00'),
-        );
-
-        $manager = new AttemptManager();
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIsOrContains(
-            'Attempts limit has been reached.'
-        );
-
-        $manager->start(
-            test: $test,
-            userId: 100,
-            attempts: [
-                $firstAttempt,
-                $secondAttempt,
-            ],
-            startedAt: new DateTimeImmutable('2026-10-01 12:00:00'),
-        );
-    }
-
-    public function testAttemptsOfAnotherUserDoNotCount(): void
-    {
-        $test = $this->createTest(attemptsLimit: 2);
-
-        $firstAttempt = new Attempt(
-            id: 1,
-            test: $test,
-            userId: 200,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
-        );
-
-        $secondAttempt = new Attempt(
-            id: 2,
-            test: $test,
-            userId: 200,
-            startedAt: new DateTimeImmutable('2026-10-01 11:00:00'),
-        );
-
-        $manager = new AttemptManager();
-
-        $attempt = $manager->start(
-            test: $test,
-            userId: 100,
-            attempts: [
-                $firstAttempt,
-                $secondAttempt,
-            ],
-            startedAt: new DateTimeImmutable('2026-10-01 12:00:00'),
-        );
-
-        self::assertSame(3, $attempt->getId());
-        self::assertSame(100, $attempt->getUserId());
-    }
-
-    public function testAttemptsForAnotherTestDoNotCount(): void
+    public function testCreatesFirstAttempt(): void
     {
         $test = $this->createTest(
-            id: 1,
+            questionsCount: 3,
             attemptsLimit: 2,
         );
 
-        $anotherTest = $this->createTest(
-            id: 2,
-            attemptsLimit: 2,
+        $manager = new AttemptManager(
+            new QuestionSelector(),
         );
-
-        $firstAttempt = new Attempt(
-            id: 1,
-            test: $anotherTest,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
-        );
-
-        $secondAttempt = new Attempt(
-            id: 2,
-            test: $anotherTest,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 11:00:00'),
-        );
-
-        $manager = new AttemptManager();
 
         $attempt = $manager->start(
             test: $test,
-            userId: 100,
-            attempts: [
-                $firstAttempt,
-                $secondAttempt,
-            ],
-            startedAt: new DateTimeImmutable('2026-10-01 12:00:00'),
+            userId: 10,
+            attempts: [],
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
         );
 
-        self::assertSame(3, $attempt->getId());
-    }
-
-    /**
-     * @param int $id
-     * @param int $attemptsLimit
-     */
-    private function createTest(
-        int $id = 1,
-        int $attemptsLimit = 2,
-    ): Test {
-        $question = new Question(
-            id: 1,
-            text: '2 + 2 = ?',
-            answers: [
-                new AnswerOption(
-                    id: 1,
-                    text: '4',
-                    correct: true,
-                ),
-            ],
-        );
-
-        return new Test(
-            id: $id,
-            title: 'Test',
-            description: 'Test description',
-            questions: [$question],
-            configuration: new TestConfiguration(
-                timeLimit: 1800,
-                attemptsLimit: $attemptsLimit,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
+        self::assertInstanceOf(Attempt::class, $attempt);
+        self::assertSame(1, $attempt->getId());
+        self::assertSame(10, $attempt->getUserId());
+        self::assertSame($test, $attempt->getTest());
+        self::assertCount(3, $attempt->getQuestions());
+        self::assertSame(
+            '2026-10-02 10:00:00',
+            $attempt->getStartedAt()->format('Y-m-d H:i:s'),
         );
     }
-    public function testActiveAttemptIsReturned(): void
+
+    public function testSelectedQuestionsBelongToTest(): void
     {
-        $test = $this->createTest(attemptsLimit: 2);
+        $questions = $this->createQuestions(5);
+
+        $test = $this->createTest(
+            questionsCount: 3,
+            attemptsLimit: 2,
+            questions: $questions,
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $attempt = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [],
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+
+        foreach ($attempt->getQuestions() as $question) {
+            self::assertContains($question, $questions);
+        }
+    }
+
+    public function testReturnsActiveAttemptInsteadOfCreatingNewOne(): void
+    {
+        $test = $this->createTest(
+            questionsCount: 3,
+            attemptsLimit: 2,
+        );
+
+        $startedAt = new DateTimeImmutable('2026-10-02 10:00:00');
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
 
         $activeAttempt = new Attempt(
             id: 1,
             test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
+            userId: 10,
+            startedAt: $startedAt,
+            questions: $test->getQuestions(),
         );
 
-        $manager = new AttemptManager();
-
-        $attempt = $manager->start(
+        $result = $manager->start(
             test: $test,
-            userId: 100,
+            userId: 10,
             attempts: [$activeAttempt],
-            startedAt: new DateTimeImmutable('2026-10-01 10:10:00'),
+            startedAt: new DateTimeImmutable('2026-10-02 10:10:00'),
         );
 
-        self::assertSame($activeAttempt, $attempt);
+        self::assertSame($activeAttempt, $result);
     }
 
-    public function testExpiredAttemptIsFinishedAndNewAttemptCanBeStarted(): void
+    public function testExpiredAttemptIsFinishedAndNewAttemptIsCreated(): void
     {
         $test = $this->createTest(
+            questionsCount: 3,
             attemptsLimit: 2,
+            timeLimit: 60,
         );
 
-        $expiredAttempt = new Attempt(
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $oldAttempt = new Attempt(
             id: 1,
             test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $test->getQuestions(),
         );
-
-        $manager = new AttemptManager();
 
         $newAttempt = $manager->start(
             test: $test,
-            userId: 100,
-            attempts: [$expiredAttempt],
-            startedAt: new DateTimeImmutable('2026-10-01 10:30:00'),
+            userId: 10,
+            attempts: [$oldAttempt],
+            startedAt: new DateTimeImmutable('2026-10-02 10:01:00'),
         );
 
-        self::assertTrue($expiredAttempt->isFinished());
-        self::assertSame(
-            '2026-10-01 10:30:00',
-            $expiredAttempt->getFinishedAt()?->format('Y-m-d H:i:s')
-        );
-
-        self::assertNotSame($expiredAttempt, $newAttempt);
+        self::assertTrue($oldAttempt->isFinished());
+        self::assertNotSame($oldAttempt, $newAttempt);
         self::assertSame(2, $newAttempt->getId());
     }
 
-    public function testNewAttemptCannotBeStartedAfterLimitIsReached(): void
+    public function testAttemptsOfAnotherUserDoNotCount(): void
     {
-        $test = $this->createTest(attemptsLimit: 2);
+        $test = $this->createTest(
+            questionsCount: 3,
+            attemptsLimit: 1,
+        );
 
-        $firstAttempt = new Attempt(
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $otherUserAttempt = new Attempt(
             id: 1,
             test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 10:00:00'),
+            userId: 20,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $test->getQuestions(),
         );
 
-        $firstAttempt->finish(
-            new DateTimeImmutable('2026-10-01 10:20:00')
+        $attempt = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [$otherUserAttempt],
+            startedAt: new DateTimeImmutable('2026-10-02 10:10:00'),
         );
 
-        $secondAttempt = new Attempt(
+        self::assertSame(2, $attempt->getId());
+        self::assertSame(10, $attempt->getUserId());
+    }
+
+    public function testAttemptsOfAnotherTestDoNotCount(): void
+    {
+        $test = $this->createTest(
+            id: 1,
+            questionsCount: 3,
+            attemptsLimit: 1,
+        );
+
+        $otherTest = $this->createTest(
+            id: 2,
+            questionsCount: 3,
+            attemptsLimit: 1,
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $otherTestAttempt = new Attempt(
+            id: 1,
+            test: $otherTest,
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $otherTest->getQuestions(),
+        );
+
+        $attempt = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [$otherTestAttempt],
+            startedAt: new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
+
+        self::assertSame(2, $attempt->getId());
+        self::assertSame($test, $attempt->getTest());
+    }
+
+    public function testThrowsWhenAttemptsLimitIsReached(): void
+    {
+        $test = $this->createTest(
+            questionsCount: 3,
+            attemptsLimit: 2,
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $attempt1 = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $test->getQuestions(),
+            finishedAt: new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
+
+        $attempt2 = new Attempt(
             id: 2,
             test: $test,
-            userId: 100,
-            startedAt: new DateTimeImmutable('2026-10-01 11:00:00'),
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 11:00:00'),
+            questions: $test->getQuestions(),
+            finishedAt: new DateTimeImmutable('2026-10-02 11:10:00'),
         );
-
-        $secondAttempt->finish(
-            new DateTimeImmutable('2026-10-01 11:20:00')
-        );
-
-        $manager = new AttemptManager();
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIsOrContains(
-            'Attempts limit has been reached.'
-        );
+        $this->expectExceptionMessageIsOrContains('Attempts limit has been reached.');
 
         $manager->start(
             test: $test,
-            userId: 100,
-            attempts: [
-                $firstAttempt,
-                $secondAttempt,
-            ],
-            startedAt: new DateTimeImmutable('2026-10-01 12:00:00'),
+            userId: 10,
+            attempts: [$attempt1, $attempt2],
+            startedAt: new DateTimeImmutable('2026-10-02 12:00:00'),
         );
+    }
+
+    public function testExpiredAttemptCountsTowardsAttemptsLimit(): void
+    {
+        $test = $this->createTest(
+            questionsCount: 3,
+            attemptsLimit: 1,
+            timeLimit: 60,
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $attempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $test->getQuestions(),
+        );
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIsOrContains('Attempts limit has been reached.');
+
+        $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [$attempt],
+            startedAt: new DateTimeImmutable('2026-10-02 10:01:00'),
+        );
+
+        self::assertTrue($attempt->isFinished());
+    }
+
+    /**
+     * @param Question[]|null $questions
+     */
+    private function createTest(
+        int $id = 1,
+        int $questionsCount = 3,
+        int $attemptsLimit = 2,
+        int $timeLimit = 3600,
+        ?array $questions = null,
+    ): Test {
+        return new Test(
+            id: $id,
+            title: 'Test',
+            description: 'Description',
+            questions: $questions ?? $this->createQuestions(5),
+            configuration: new TestConfiguration(
+                timeLimit: $timeLimit,
+                attemptsLimit: $attemptsLimit,
+                passingScore: 70,
+                questionsCount: $questionsCount,
+            ),
+        );
+    }
+
+    public function testAttemptExpiresExactlyAtStartTimeOfNewAttempt(): void
+    {
+        $test = $this->createTest(
+            questionsCount: 3,
+            attemptsLimit: 2,
+            timeLimit: 60,
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $oldAttempt = new Attempt(
+            id: 1,
+            test: $test,
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $test->getQuestions(),
+        );
+
+        $newAttempt = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [$oldAttempt],
+            startedAt: new DateTimeImmutable('2026-10-02 10:01:00'),
+        );
+
+        self::assertTrue($oldAttempt->isFinished());
+        self::assertNotSame($oldAttempt, $newAttempt);
+        self::assertSame(2, $newAttempt->getId());
+        self::assertEquals(
+            new DateTimeImmutable('2026-10-02 10:01:00'),
+            $oldAttempt->getFinishedAt(),
+        );
+    }
+
+    /**
+     * @return Question[]
+     */
+    private function createQuestions(int $count): array
+    {
+        $questions = [];
+
+        for ($i = 1; $i <= $count; $i++) {
+            $questions[] = new Question(
+                id: $i,
+                text: 'Question ' . $i,
+                answers: [],
+            );
+        }
+
+        return $questions;
     }
 }

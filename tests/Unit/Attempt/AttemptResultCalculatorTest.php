@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Elros\Testing\Tests\Unit\Attempt;
+namespace Elros\Testing\Tests\Attempt;
 
 use Elros\Testing\Attempt\Attempt;
 use Elros\Testing\Attempt\AttemptResultCalculator;
@@ -17,278 +17,409 @@ use PHPUnit\Framework\TestCase;
 
 final class AttemptResultCalculatorTest extends TestCase
 {
-    public function testSingleQuestionWithCorrectAnswerGetsFullScore(): void
+    public function testCalculatesResultForAllCorrectAnswers(): void
     {
-        $correctAnswer = new AnswerOption(1, '4', true);
-        $wrongAnswer = new AnswerOption(2, '5', false);
-
-        $question = new Question(
-            1,
-            '2 + 2 = ?',
-            [$correctAnswer, $wrongAnswer],
-            QuestionType::SINGLE,
+        $question1 = $this->createSingleQuestion(
+            id: 1,
+            correctAnswerId: 11,
         );
 
-        $test = new Test(
-            1,
-            'Математика',
-            '',
-            [$question],
-            new TestConfiguration(
-                timeLimit: 60,
-                attemptsLimit: 1,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
+        $question2 = $this->createSingleQuestion(
+            id: 2,
+            correctAnswerId: 21,
         );
 
-        $attempt = new Attempt(
-            1,
-            $test,
-            100,
-            new DateTimeImmutable(),
+        $question3 = $this->createSingleQuestion(
+            id: 3,
+            correctAnswerId: 31,
+        );
+
+        $test = $this->createTest([
+            $question1,
+            $question2,
+            $question3,
+        ]);
+
+        $attempt = $this->createAttempt(
+            test: $test,
+            questions: [
+                $question1,
+                $question2,
+                $question3,
+            ],
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$correctAnswer]),
-            new DateTimeImmutable('2026-10-01 10:31:00'),
+            new UserAnswer(
+                $question1,
+                [$question1->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
         );
 
-        $result = (new AttemptResultCalculator())->calculate($attempt);
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question2,
+                [$question2->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
 
-        self::assertSame(1, $result->getTotalQuestions());
-        self::assertSame(1, $result->getAnsweredQuestions());
-        self::assertSame(1, $result->getCorrectAnswers());
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question3,
+                [$question3->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
+
+        $calculator = new AttemptResultCalculator();
+
+        $result = $calculator->calculate($attempt);
+
+        self::assertSame(3, $result->getTotalQuestions());
+        self::assertSame(3, $result->getAnsweredQuestions());
+        self::assertSame(3, $result->getCorrectAnswers());
         self::assertSame(100, $result->getScore());
         self::assertTrue($result->isPassed());
     }
 
-    public function testSingleQuestionWithWrongAnswerGetsZeroScore(): void
+    public function testCalculatesResultForPartiallyCorrectAnswers(): void
     {
-        $correctAnswer = new AnswerOption(1, '4', true);
-        $wrongAnswer = new AnswerOption(2, '5', false);
-
-        $question = new Question(
-            1,
-            '2 + 2 = ?',
-            [$correctAnswer, $wrongAnswer],
-            QuestionType::SINGLE,
+        $question1 = $this->createSingleQuestion(
+            id: 1,
+            correctAnswerId: 11,
         );
 
-        $test = new Test(
-            1,
-            'Математика',
-            '',
-            [$question],
-            new TestConfiguration(
-                timeLimit: 60,
-                attemptsLimit: 1,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
+        $question2 = $this->createSingleQuestion(
+            id: 2,
+            correctAnswerId: 21,
         );
 
-        $attempt = new Attempt(
-            1,
-            $test,
-            100,
-            new DateTimeImmutable(),
+        $question3 = $this->createSingleQuestion(
+            id: 3,
+            correctAnswerId: 31,
+        );
+
+        $question4 = $this->createSingleQuestion(
+            id: 4,
+            correctAnswerId: 41,
+        );
+
+        $test = $this->createTest([
+            $question1,
+            $question2,
+            $question3,
+            $question4,
+        ]);
+
+        $attempt = $this->createAttempt(
+            test: $test,
+            questions: [
+                $question1,
+                $question2,
+                $question3,
+                $question4,
+            ],
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$wrongAnswer]),
-            new DateTimeImmutable('2026-10-01 10:31:00'),
+            new UserAnswer(
+                $question1,
+                [$question1->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
         );
 
-        $result = (new AttemptResultCalculator())->calculate($attempt);
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question2,
+                [$question2->getAnswers()[1]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
 
-        self::assertSame(1, $result->getTotalQuestions());
-        self::assertSame(1, $result->getAnsweredQuestions());
-        self::assertSame(0, $result->getCorrectAnswers());
-        self::assertSame(0, $result->getScore());
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question3,
+                [$question3->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question4,
+                [$question4->getAnswers()[1]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
+
+        $calculator = new AttemptResultCalculator();
+
+        $result = $calculator->calculate($attempt);
+
+        self::assertSame(4, $result->getTotalQuestions());
+        self::assertSame(4, $result->getAnsweredQuestions());
+        self::assertSame(2, $result->getCorrectAnswers());
+        self::assertSame(50, $result->getScore());
         self::assertFalse($result->isPassed());
     }
 
-    public function testMultipleQuestionWithAllCorrectAnswersGetsFullScore(): void
+    public function testUnansweredQuestionsAreIncludedInTotal(): void
     {
-        $answer1 = new AnswerOption(1, '2', true);
-        $answer2 = new AnswerOption(2, '3', false);
-        $answer3 = new AnswerOption(3, '4', true);
-
-        $question = new Question(
-            1,
-            'Какие числа являются чётными?',
-            [$answer1, $answer2, $answer3],
-            QuestionType::MULTIPLE,
+        $question1 = $this->createSingleQuestion(
+            id: 1,
+            correctAnswerId: 11,
         );
 
-        $test = new Test(
-            1,
-            'Математика',
-            '',
-            [$question],
-            new TestConfiguration(
-                timeLimit: 60,
-                attemptsLimit: 1,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
+        $question2 = $this->createSingleQuestion(
+            id: 2,
+            correctAnswerId: 21,
         );
 
-        $attempt = new Attempt(
-            1,
-            $test,
-            100,
-            new DateTimeImmutable(),
+        $question3 = $this->createSingleQuestion(
+            id: 3,
+            correctAnswerId: 31,
+        );
+
+        $test = $this->createTest([
+            $question1,
+            $question2,
+            $question3,
+        ]);
+
+        $attempt = $this->createAttempt(
+            test: $test,
+            questions: [
+                $question1,
+                $question2,
+                $question3,
+            ],
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$answer1, $answer3]),
-            new DateTimeImmutable('2026-10-01 10:31:00'),
+            new UserAnswer(
+                $question1,
+                [$question1->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
         );
 
-        $result = (new AttemptResultCalculator())->calculate($attempt);
+        $calculator = new AttemptResultCalculator();
 
-        self::assertSame(1, $result->getTotalQuestions());
+        $result = $calculator->calculate($attempt);
+
+        self::assertSame(3, $result->getTotalQuestions());
         self::assertSame(1, $result->getAnsweredQuestions());
         self::assertSame(1, $result->getCorrectAnswers());
-        self::assertSame(100, $result->getScore());
+        self::assertSame(33, $result->getScore());
+        self::assertFalse($result->isPassed());
+    }
+
+    public function testPassingScoreIsIncludedInPassedResult(): void
+    {
+        $question1 = $this->createSingleQuestion(1, 11);
+        $question2 = $this->createSingleQuestion(2, 21);
+
+        $test = $this->createTest(
+            questions: [$question1, $question2],
+            passingScore: 50,
+        );
+
+        $attempt = $this->createAttempt(
+            test: $test,
+            questions: [$question1, $question2],
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer(
+                $question1,
+                [$question1->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
+        );
+
+        $calculator = new AttemptResultCalculator();
+
+        $result = $calculator->calculate($attempt);
+
+        self::assertSame(50, $result->getScore());
         self::assertTrue($result->isPassed());
     }
 
-    public function testMultipleQuestionWithPartiallySelectedCorrectAnswersIsIncorrect(): void
+    public function testScoreBelowPassingScoreIsNotPassed(): void
     {
-        $answer1 = new AnswerOption(1, '2', true);
-        $answer2 = new AnswerOption(2, '3', false);
-        $answer3 = new AnswerOption(3, '4', true);
+        $question1 = $this->createSingleQuestion(1, 11);
+        $question2 = $this->createSingleQuestion(2, 21);
 
-        $question = new Question(
-            1,
-            'Какие числа являются чётными?',
-            [$answer1, $answer2, $answer3],
-            QuestionType::MULTIPLE,
+        $test = $this->createTest(
+            questions: [$question1, $question2],
+            passingScore: 51,
         );
 
-        $test = new Test(
-            1,
-            'Математика',
-            '',
-            [$question],
-            new TestConfiguration(
-                timeLimit: 60,
-                attemptsLimit: 1,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
-        );
-
-        $attempt = new Attempt(
-            1,
-            $test,
-            100,
-            new DateTimeImmutable(),
+        $attempt = $this->createAttempt(
+            test: $test,
+            questions: [$question1, $question2],
         );
 
         $attempt->answerQuestion(
-            new UserAnswer($question, [$answer1]),
-            new DateTimeImmutable('2026-10-01 10:31:00'),
+            new UserAnswer(
+                $question1,
+                [$question1->getAnswers()[0]],
+            ),
+            new DateTimeImmutable('2026-10-02 10:10:00'),
         );
 
-        $result = (new AttemptResultCalculator())->calculate($attempt);
+        $calculator = new AttemptResultCalculator();
 
-        self::assertSame(0, $result->getCorrectAnswers());
-        self::assertSame(0, $result->getScore());
+        $result = $calculator->calculate($attempt);
+
+        self::assertSame(50, $result->getScore());
         self::assertFalse($result->isPassed());
     }
 
-    public function testMultipleQuestionWithExtraWrongAnswerIsIncorrect(): void
+    public function testMultipleQuestionIsCorrectWhenAllCorrectAnswersAreSelected(): void
     {
-        $answer1 = new AnswerOption(1, '2', true);
-        $answer2 = new AnswerOption(2, '3', false);
-        $answer3 = new AnswerOption(3, '4', true);
-
         $question = new Question(
-            1,
-            'Какие числа являются чётными?',
-            [$answer1, $answer2, $answer3],
-            QuestionType::MULTIPLE,
+            id: 1,
+            text: 'Select correct answers',
+            answers: [
+                new AnswerOption(11, 'Answer 1', true),
+                new AnswerOption(12, 'Answer 2', false),
+                new AnswerOption(13, 'Answer 3', true),
+                new AnswerOption(14, 'Answer 4', false),
+            ],
+            type: QuestionType::MULTIPLE,
         );
 
-        $test = new Test(
-            1,
-            'Математика',
-            '',
-            [$question],
-            new TestConfiguration(
-                timeLimit: 60,
-                attemptsLimit: 1,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
+        $userAnswer = new UserAnswer(
+            $question,
+            [
+                $question->getAnswers()[2],
+                $question->getAnswers()[0],
+            ],
         );
 
-        $attempt = new Attempt(
-            1,
-            $test,
-            100,
-            new DateTimeImmutable(),
+        $calculator = new AttemptResultCalculator();
+
+        self::assertTrue(
+            $calculator->isCorrect($userAnswer),
         );
-
-        $attempt->answerQuestion(
-            new UserAnswer($question, [$answer1, $answer2, $answer3]),
-            new DateTimeImmutable('2026-10-01 10:31:00'),
-        );
-
-        $result = (new AttemptResultCalculator())->calculate($attempt);
-
-        self::assertSame(0, $result->getCorrectAnswers());
-        self::assertSame(0, $result->getScore());
-        self::assertFalse($result->isPassed());
     }
 
-    public function testMultipleQuestionDoesNotDependOnAnswerOrder(): void
+    public function testMultipleQuestionIsIncorrectWhenOneCorrectAnswerIsMissing(): void
     {
-        $answer1 = new AnswerOption(1, '2', true);
-        $answer2 = new AnswerOption(2, '3', false);
-        $answer3 = new AnswerOption(3, '4', true);
-
         $question = new Question(
-            1,
-            'Какие числа являются чётными?',
-            [$answer1, $answer2, $answer3],
-            QuestionType::MULTIPLE,
+            id: 1,
+            text: 'Select correct answers',
+            answers: [
+                new AnswerOption(11, 'Answer 1', true),
+                new AnswerOption(12, 'Answer 2', false),
+                new AnswerOption(13, 'Answer 3', true),
+            ],
+            type: QuestionType::MULTIPLE,
         );
 
-        $test = new Test(
-            1,
-            'Математика',
-            '',
-            [$question],
-            new TestConfiguration(
-                timeLimit: 60,
-                attemptsLimit: 1,
-                passingScore: 70,
-                questionsCount: 10,
+        $userAnswer = new UserAnswer(
+            $question,
+            [
+                $question->getAnswers()[0],
+            ],
+        );
+
+        $calculator = new AttemptResultCalculator();
+
+        self::assertFalse(
+            $calculator->isCorrect($userAnswer),
+        );
+    }
+
+    public function testMultipleQuestionIsIncorrectWhenExtraWrongAnswerIsSelected(): void
+    {
+        $question = new Question(
+            id: 1,
+            text: 'Select correct answers',
+            answers: [
+                new AnswerOption(11, 'Answer 1', true),
+                new AnswerOption(12, 'Answer 2', false),
+                new AnswerOption(13, 'Answer 3', true),
+            ],
+            type: QuestionType::MULTIPLE,
+        );
+
+        $userAnswer = new UserAnswer(
+            $question,
+            [
+                $question->getAnswers()[0],
+                $question->getAnswers()[2],
+                $question->getAnswers()[1],
+            ],
+        );
+
+        $calculator = new AttemptResultCalculator();
+
+        self::assertFalse(
+            $calculator->isCorrect($userAnswer),
+        );
+    }
+
+    /**
+     * @param Question[] $questions
+     */
+    private function createTest(
+        array $questions,
+        int $passingScore = 70,
+    ): Test {
+        return new Test(
+            id: 1,
+            title: 'Test',
+            description: 'Description',
+            questions: $questions,
+            configuration: new TestConfiguration(
+                timeLimit: 3600,
+                attemptsLimit: 2,
+                passingScore: $passingScore,
+                questionsCount: count($questions),
             ),
         );
+    }
 
-        $attempt = new Attempt(
-            1,
-            $test,
-            100,
-            new DateTimeImmutable(),
+    /**
+     * @param Question[] $questions
+     */
+    private function createAttempt(
+        Test $test,
+        array $questions,
+    ): Attempt {
+        return new Attempt(
+            id: 1,
+            test: $test,
+            userId: 10,
+            startedAt: new DateTimeImmutable('2026-10-02 10:00:00'),
+            questions: $questions,
         );
+    }
 
-        // Правильные ответы выбраны в обратном порядке.
-        $attempt->answerQuestion(
-            new UserAnswer($question, [$answer3, $answer1]),
-            new DateTimeImmutable('2026-10-01 10:31:00'),
+    private function createSingleQuestion(
+        int $id,
+        int $correctAnswerId,
+    ): Question {
+        return new Question(
+            id: $id,
+            text: 'Question ' . $id,
+            answers: [
+                new AnswerOption(
+                    id: $correctAnswerId,
+                    text: 'Correct answer',
+                    correct: true,
+                ),
+                new AnswerOption(
+                    id: $correctAnswerId + 1,
+                    text: 'Wrong answer',
+                    correct: false,
+                ),
+            ],
         );
-
-        $result = (new AttemptResultCalculator())->calculate($attempt);
-
-        self::assertSame(1, $result->getCorrectAnswers());
-        self::assertSame(100, $result->getScore());
-        self::assertTrue($result->isPassed());
     }
 }

@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Elros\Testing\Tests\Integration\Attempt;
+namespace Elros\Testing\Tests\Integration;
 
 use Elros\Testing\Attempt\Attempt;
+use Elros\Testing\Attempt\AttemptManager;
 use Elros\Testing\Attempt\AttemptResultCalculator;
 use Elros\Testing\Attempt\UserAnswer;
 use Elros\Testing\Question\AnswerOption;
 use Elros\Testing\Question\Question;
+use Elros\Testing\Question\QuestionSelector;
 use Elros\Testing\Question\QuestionType;
 use Elros\Testing\Test\Test;
 use Elros\Testing\Test\TestConfiguration;
@@ -18,298 +20,362 @@ use PHPUnit\Framework\TestCase;
 
 final class AttemptLifecycleTest extends TestCase
 {
-    public function testFullAttemptLifecycle(): void
+    public function testCompleteAttemptLifecycle(): void
     {
-        /*
-         * 1. Создаём вопросы.
-         */
+        $questions = [
+            $this->createQuestion(
+                id: 1,
+                correctAnswerId: 101,
+            ),
+            $this->createQuestion(
+                id: 2,
+                correctAnswerId: 201,
+            ),
+            $this->createQuestion(
+                id: 3,
+                correctAnswerId: 301,
+            ),
+        ];
 
-        $question1 = new Question(
-            1,
-            'Столица России?',
-            [
-                new AnswerOption(1, 'Москва', true),
-                new AnswerOption(2, 'Санкт-Петербург', false),
-            ],
+        $configuration = new TestConfiguration(
+            timeLimit: 600,
+            attemptsLimit: 2,
+            passingScore: 67,
+            questionsCount: 3,
         );
-
-        $question2 = new Question(
-            2,
-            'Сколько будет 2 + 2?',
-            [
-                new AnswerOption(3, '3', false),
-                new AnswerOption(4, '4', true),
-            ],
-        );
-
-        $question3 = new Question(
-            3,
-            'Какой язык используется для серверной разработки?',
-            [
-                new AnswerOption(5, 'PHP', true),
-                new AnswerOption(6, 'HTML', false),
-            ],
-        );
-
-        $question4 = new Question(
-            4,
-            'Какие числа являются чётными?',
-            [
-                new AnswerOption(7, '2', true),
-                new AnswerOption(8, '3', false),
-                new AnswerOption(9, '4', true),
-            ],
-            QuestionType::MULTIPLE,
-        );
-
-        $question5 = new Question(
-            5,
-            'Какой HTTP-метод используется для создания ресурса?',
-            [
-                new AnswerOption(10, 'GET', false),
-                new AnswerOption(11, 'POST', true),
-            ],
-        );
-
-        /*
-         * 2. Создаём тест.
-         *
-         * Лимит времени — 30 секунд.
-         * Для прохождения нужно набрать 70%.
-         */
 
         $test = new Test(
             id: 1,
-            title: 'Основы программирования',
-            description: 'Проверка базовых знаний',
-            questions: [
-                $question1,
-                $question2,
-                $question3,
-                $question4,
-                $question5,
-            ],
-            configuration: new TestConfiguration(
-                timeLimit: 30,
-                attemptsLimit: 2,
-                passingScore: 70,
-                questionsCount: 10
-            ),
+            title: 'PHP Test',
+            description: 'Test description',
+            questions: $questions,
+            configuration: $configuration,
         );
+
+        $startedAt = new DateTimeImmutable('2026-10-02 10:00:00');
 
         /*
-         * 3. Пользователь начинает попытку.
+         * 1. Start attempt.
          */
-
-        $startedAt = new DateTimeImmutable(
-            '2026-10-01 10:00:00'
+        $manager = new AttemptManager(
+            new QuestionSelector(),
         );
 
-        $attempt = new Attempt(
-            id: 1,
+        $attempt = $manager->start(
             test: $test,
-            userId: 100,
+            userId: 10,
+            attempts: [],
             startedAt: $startedAt,
         );
 
+        self::assertSame(1, $attempt->getId());
+        self::assertSame(10, $attempt->getUserId());
         self::assertFalse($attempt->isFinished());
-        self::assertFalse(
-            $attempt->isExpired($startedAt)
-        );
+        self::assertCount(3, $attempt->getQuestions());
 
         /*
-         * 4. Пользователь отвечает на вопросы.
+         * 2. Answer questions.
          *
-         * Q1 — правильно.
-         * Q2 — правильно.
-         * Q3 — неправильно.
-         * Q4 — правильно.
-         * Q5 — не успел ответить.
+         * First two answers are correct.
+         * Third question remains unanswered.
          */
-
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question1,
-                [$question1->getAnswers()[0]],
-            ),
-            new DateTimeImmutable('2026-10-01 10:00:05'),
-        );
-
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question2,
-                [$question2->getAnswers()[1]],
-            ),
-            new DateTimeImmutable('2026-10-01 10:00:10'),
-        );
-
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question3,
-                [$question3->getAnswers()[1]],
-            ),
-            new DateTimeImmutable('2026-10-01 10:00:15'),
-        );
-
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question4,
-                [
-                    $question4->getAnswers()[0],
-                    $question4->getAnswers()[2],
-                ],
-            ),
-            new DateTimeImmutable('2026-10-01 10:00:20'),
-        );
-
-        self::assertCount(4, $attempt->getAnswers());
-
-        /*
-         * 5. Время истекло.
-         */
-
-        $expiredAt = new DateTimeImmutable(
-            '2026-10-01 10:00:30'
-        );
-
-        self::assertTrue(
-            $attempt->isExpired($expiredAt)
-        );
-
-        /*
-         * 6. Автоматически завершаем попытку.
-         */
-
-        $finished = $attempt->finishIfExpired($expiredAt);
-
-        self::assertTrue($finished);
-        self::assertTrue($attempt->isFinished());
-
-        self::assertEquals(
-            $expiredAt,
-            $attempt->getFinishedAt()
-        );
-
-        /*
-         * 7. После окончания времени ответить нельзя.
-         */
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIsOrContains(
-            'Cannot answer a finished attempt.'
-        );
-
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question5,
-                [$question5->getAnswers()[1]],
-            ),
-            new DateTimeImmutable('2026-10-01 10:00:31'),
-        );
-    }
-
-    public function testResultCanBeCalculatedAfterTimeout(): void
-    {
-        $question1 = new Question(
+        $question1 = $this->findQuestion(
+            $attempt,
             1,
-            'Столица России?',
-            [
-                new AnswerOption(1, 'Москва', true),
-                new AnswerOption(2, 'Санкт-Петербург', false),
-            ],
         );
 
-        $question2 = new Question(
+        $question2 = $this->findQuestion(
+            $attempt,
             2,
-            'Сколько будет 2 + 2?',
-            [
-                new AnswerOption(3, '3', false),
-                new AnswerOption(4, '4', true),
-            ],
-        );
-
-        $question3 = new Question(
-            3,
-            'Какой язык используется для серверной разработки?',
-            [
-                new AnswerOption(5, 'PHP', true),
-                new AnswerOption(6, 'HTML', false),
-            ],
-        );
-
-        $test = new Test(
-            id: 1,
-            title: 'Основы программирования',
-            description: 'Проверка базовых знаний',
-            questions: [
-                $question1,
-                $question2,
-                $question3,
-            ],
-            configuration: new TestConfiguration(
-                timeLimit: 30,
-                attemptsLimit: 2,
-                passingScore: 70,
-                questionsCount: 10,
-            ),
-        );
-
-        $startedAt = new DateTimeImmutable(
-            '2026-10-01 10:00:00'
-        );
-
-        $attempt = new Attempt(
-            id: 1,
-            test: $test,
-            userId: 100,
-            startedAt: $startedAt,
-        );
-
-        /*
-         * Ответили только на два вопроса.
-         *
-         * Q1 — правильно.
-         * Q2 — неправильно.
-         * Q3 — пропущен.
-         */
-
-        $attempt->answerQuestion(
-            new UserAnswer(
-                $question1,
-                [$question1->getAnswers()[0]],
-            ),
-            new DateTimeImmutable('2026-10-01 10:00:05'),
         );
 
         $attempt->answerQuestion(
             new UserAnswer(
-                $question2,
-                [$question2->getAnswers()[0]],
+                question: $question1,
+                answers: [$this->findAnswer($question1, 101)],
             ),
-            new DateTimeImmutable('2026-10-01 10:00:10'),
+            now: new DateTimeImmutable('2026-10-02 10:01:00'),
         );
 
-        $expiredAt = new DateTimeImmutable(
-            '2026-10-01 10:00:30'
+        $attempt->answerQuestion(
+            new UserAnswer(
+                question: $question2,
+                answers: [$this->findAnswer($question2, 201)],
+            ),
+            now: new DateTimeImmutable('2026-10-02 10:02:00'),
         );
 
-        $attempt->finishIfExpired($expiredAt);
+        self::assertCount(2, $attempt->getAnswers());
+        self::assertFalse($attempt->isFinished());
 
         /*
-         * Рассчитываем результат уже завершённой попытки.
+         * 3. Finish attempt.
          */
+        $finishedAt = new DateTimeImmutable('2026-10-02 10:03:00');
 
+        $attempt->finish($finishedAt);
+
+        self::assertTrue($attempt->isFinished());
+        self::assertEquals(
+            $finishedAt,
+            $attempt->getFinishedAt(),
+        );
+
+        /*
+         * 4. Calculate result.
+         */
         $calculator = new AttemptResultCalculator();
 
         $result = $calculator->calculate($attempt);
 
         self::assertSame(3, $result->getTotalQuestions());
         self::assertSame(2, $result->getAnsweredQuestions());
+        self::assertSame(2, $result->getCorrectAnswers());
+        self::assertSame(67, $result->getScore());
+        self::assertTrue($result->isPassed());
+    }
+
+    public function testAttemptIsFinishedWhenTimeExpires(): void
+    {
+        $questions = [
+            $this->createQuestion(
+                id: 1,
+                correctAnswerId: 101,
+            ),
+            $this->createQuestion(
+                id: 2,
+                correctAnswerId: 201,
+            ),
+            $this->createQuestion(
+                id: 3,
+                correctAnswerId: 301,
+            ),
+        ];
+
+        $configuration = new TestConfiguration(
+            timeLimit: 60,
+            attemptsLimit: 2,
+            passingScore: 67,
+            questionsCount: 3,
+        );
+
+        $test = new Test(
+            id: 1,
+            title: 'PHP Test',
+            description: 'Test description',
+            questions: $questions,
+            configuration: $configuration,
+        );
+
+        $startedAt = new DateTimeImmutable(
+            '2026-10-02 10:00:00',
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        /*
+     * 1. Start attempt.
+     */
+        $attempt = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [],
+            startedAt: $startedAt,
+        );
+
+        self::assertFalse($attempt->isFinished());
+
+        /*
+     * 2. Answer one question before expiration.
+     */
+        $question = $this->findQuestion(
+            $attempt,
+            1,
+        );
+
+        $attempt->answerQuestion(
+            new UserAnswer(
+                question: $question,
+                answers: [$this->findAnswer($question, 101)],
+            ),
+            now: new DateTimeImmutable(
+                '2026-10-02 10:00:30',
+            ),
+        );
+
+        self::assertCount(1, $attempt->getAnswers());
+
+        /*
+     * 3. Time expires.
+     */
+        $expiredAt = new DateTimeImmutable(
+            '2026-10-02 10:01:00',
+        );
+
+        self::assertTrue(
+            $attempt->isExpired($expiredAt),
+        );
+
+        /*
+     * 4. Finish expired attempt.
+     */
+        self::assertTrue(
+            $attempt->finishIfExpired($expiredAt),
+        );
+
+        self::assertTrue($attempt->isFinished());
+
+        self::assertEquals(
+            $expiredAt,
+            $attempt->getFinishedAt(),
+        );
+
+        /*
+     * 5. Calculate result.
+     */
+        $calculator = new AttemptResultCalculator();
+
+        $result = $calculator->calculate($attempt);
+
+        self::assertSame(3, $result->getTotalQuestions());
+        self::assertSame(1, $result->getAnsweredQuestions());
         self::assertSame(1, $result->getCorrectAnswers());
-
-        // 1 правильный ответ из 3 вопросов = 33%.
         self::assertSame(33, $result->getScore());
-
         self::assertFalse($result->isPassed());
+    }
+
+    public function testExpiredAttemptCannotBeContinued(): void
+    {
+        $questions = [
+            $this->createQuestion(
+                id: 1,
+                correctAnswerId: 101,
+            ),
+            $this->createQuestion(
+                id: 2,
+                correctAnswerId: 201,
+            ),
+        ];
+
+        $configuration = new TestConfiguration(
+            timeLimit: 60,
+            attemptsLimit: 2,
+            passingScore: 50,
+            questionsCount: 2,
+        );
+
+        $test = new Test(
+            id: 1,
+            title: 'PHP Test',
+            description: 'Test description',
+            questions: $questions,
+            configuration: $configuration,
+        );
+
+        $startedAt = new DateTimeImmutable(
+            '2026-10-02 10:00:00',
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $attempt = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [],
+            startedAt: $startedAt,
+        );
+
+        /*
+     * Время истекло.
+     */
+        $expiredAt = new DateTimeImmutable(
+            '2026-10-02 10:01:00',
+        );
+
+        self::assertTrue(
+            $attempt->finishIfExpired($expiredAt),
+        );
+
+        self::assertTrue($attempt->isFinished());
+
+        /*
+     * Попытка завершена и больше не может принимать ответы.
+     */
+        $question = $this->findQuestion(
+            $attempt,
+            1,
+        );
+
+        $answer = new UserAnswer(
+            question: $question,
+            answers: [$this->findAnswer($question, 101)],
+        );
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIsOrContains(
+            'Cannot answer a finished attempt.',
+        );
+
+        $attempt->answerQuestion(
+            userAnswer: $answer,
+            now: $expiredAt,
+        );
+    }
+
+    private function createQuestion(
+        int $id,
+        int $correctAnswerId,
+    ): Question {
+        return new Question(
+            id: $id,
+            text: 'Question ' . $id,
+            answers: [
+                new AnswerOption(
+                    id: $correctAnswerId,
+                    text: 'Correct answer',
+                    correct: true,
+                ),
+                new AnswerOption(
+                    id: $correctAnswerId + 1,
+                    text: 'Wrong answer',
+                    correct: false,
+                ),
+            ],
+            type: QuestionType::SINGLE,
+        );
+    }
+
+    private function findQuestion(
+        Attempt $attempt,
+        int $questionId,
+    ): Question {
+        foreach ($attempt->getQuestions() as $question) {
+            if ($question->getId() === $questionId) {
+                return $question;
+            }
+        }
+
+        self::fail(
+            'Question ' . $questionId . ' was not found in attempt.',
+        );
+    }
+
+    private function findAnswer(
+        Question $question,
+        int $answerId,
+    ): AnswerOption {
+        foreach ($question->getAnswers() as $answer) {
+            if ($answer->getId() === $answerId) {
+                return $answer;
+            }
+        }
+
+        self::fail(
+            'Answer ' . $answerId . ' was not found.',
+        );
     }
 }
