@@ -246,6 +246,137 @@ final class AttemptLifecycleTest extends TestCase
         self::assertFalse($result->isPassed());
     }
 
+    public function testUserCanHaveMultipleIndependentAttempts(): void
+    {
+        $questions = [
+            $this->createQuestion(
+                id: 1,
+                correctAnswerId: 101,
+            ),
+            $this->createQuestion(
+                id: 2,
+                correctAnswerId: 201,
+            ),
+            $this->createQuestion(
+                id: 3,
+                correctAnswerId: 301,
+            ),
+        ];
+
+        $configuration = new TestConfiguration(
+            timeLimit: 600,
+            attemptsLimit: 2,
+            passingScore: 67,
+            questionsCount: 3,
+        );
+
+        $test = new Test(
+            id: 1,
+            title: 'PHP Test',
+            description: 'Test description',
+            questions: $questions,
+            configuration: $configuration,
+        );
+
+        $manager = new AttemptManager(
+            new QuestionSelector(),
+        );
+
+        $calculator = new AttemptResultCalculator();
+
+        /*
+     * Первая попытка.
+     */
+        $attempt1 = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [],
+            startedAt: new DateTimeImmutable(
+                '2026-10-02 10:00:00',
+            ),
+        );
+
+        $question1 = $this->findQuestion($attempt1, 1);
+        $question2 = $this->findQuestion($attempt1, 2);
+
+        $attempt1->answerQuestion(
+            new UserAnswer(
+                question: $question1,
+                answers: [$this->findAnswer($question1, 101)],
+            ),
+            now: new DateTimeImmutable(
+                '2026-10-02 10:01:00',
+            ),
+        );
+
+        $attempt1->answerQuestion(
+            new UserAnswer(
+                question: $question2,
+                answers: [$this->findAnswer($question2, 201)],
+            ),
+            now: new DateTimeImmutable(
+                '2026-10-02 10:02:00',
+            ),
+        );
+
+        $attempt1->finish(
+            new DateTimeImmutable(
+                '2026-10-02 10:03:00',
+            ),
+        );
+
+        /*
+     * Вторая попытка.
+     */
+        $attempt2 = $manager->start(
+            test: $test,
+            userId: 10,
+            attempts: [$attempt1],
+            startedAt: new DateTimeImmutable(
+                '2026-10-02 11:00:00',
+            ),
+        );
+
+        self::assertNotSame($attempt1, $attempt2);
+        self::assertSame(2, $attempt2->getId());
+
+        /*
+     * Во второй попытке пока нет ответов.
+     */
+        self::assertCount(0, $attempt2->getAnswers());
+
+        $attempt2->finish(
+            new DateTimeImmutable(
+                '2026-10-02 11:01:00',
+            ),
+        );
+
+        /*
+     * Рассчитываем результаты независимо.
+     */
+        $result1 = $calculator->calculate($attempt1);
+        $result2 = $calculator->calculate($attempt2);
+
+        self::assertSame(3, $result1->getTotalQuestions());
+        self::assertSame(2, $result1->getAnsweredQuestions());
+        self::assertSame(2, $result1->getCorrectAnswers());
+        self::assertSame(67, $result1->getScore());
+        self::assertTrue($result1->isPassed());
+
+        self::assertSame(3, $result2->getTotalQuestions());
+        self::assertSame(0, $result2->getAnsweredQuestions());
+        self::assertSame(0, $result2->getCorrectAnswers());
+        self::assertSame(0, $result2->getScore());
+        self::assertFalse($result2->isPassed());
+
+        /*
+     * Первая попытка не изменилась после создания второй.
+     */
+        self::assertCount(2, $attempt1->getAnswers());
+        self::assertTrue($attempt1->isFinished());
+        self::assertTrue($attempt2->isFinished());
+    }
+
     public function testExpiredAttemptCannotBeContinued(): void
     {
         $questions = [
